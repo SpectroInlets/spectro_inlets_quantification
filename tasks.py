@@ -1,11 +1,57 @@
 """Definition of invoke tasks for task and tool running automation"""
 
+import platform
 from pathlib import Path
 
 from invoke import task
 
 
 THIS_DIR = Path(__file__).parent
+
+
+
+@task(
+    aliases=["tests"],
+    help={
+        "color": "Whether to display pytest output in color, 'yes' or 'no'",
+        "verbose": "Makes the pytest output verbose",
+        "s_no_capture": (
+                "Prevents pytest from capturing output (making it possible to see prints etc.)"
+        ),
+        "k_only_run": (
+                "Only run tests that matches the expression in STRING. See the help for pytest's "
+                "`-k` option to read more about the options for expression"
+        ),
+        "x_exit_on_first_error": "Make pytest exit on first error",
+        "also_slow": "Also run slow tests, disabled by default",
+    },
+)
+def test(
+        context,
+        color="yes",
+        verbose=False,
+        s_no_capture=False,
+        k_only_run=None,
+        x_exit_on_first_error=False,
+        also_slow=False,
+):
+    """Run tests with pytest"""
+    if platform.system() == "Windows":
+        color = "no"
+    args = []
+    if verbose:
+        args.append("--verbose")
+    if s_no_capture:
+        args.append("-s")
+    if k_only_run:
+        args.append(f"-k {k_only_run}")
+    if x_exit_on_first_error:
+        args.append("-x")
+    if not also_slow:
+        args += ["-m", r'"not slow"']
+    print("### Testing ...")
+    result = context.run(f'pytest --color "{color}" {" ".join(args)} {THIS_DIR}/tests')
+    return result.return_code
 
 
 @task(aliases=("bd",))
