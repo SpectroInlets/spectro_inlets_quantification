@@ -5,15 +5,12 @@ should. It is here only to make the code installable for developers with: pip in
 
 """
 import os
-from pathlib import Path
-
 from setuptools import setup, find_packages
 
 
-THIS_DIR = Path(__file__).parent
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGES = find_packages(where=os.path.join(THIS_DIR, "src"))
 
-
-PACKAGES = find_packages(where=THIS_DIR / "src")
 
 setup(
     name="spectro_inlets_quantification",
