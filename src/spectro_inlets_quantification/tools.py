@@ -111,7 +111,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def dict_equal_with_close_floats(dict1, dict2):
+def dict_equal_with_close_floats(dict1: Dict[Any, Any], dict2: Dict[Any, Any]) -> bool:
     """Return whether the two dicts are equal, but allow for floats to be only close"""
     if dict1.keys() != dict2.keys():
         return False

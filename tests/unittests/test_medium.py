@@ -1,4 +1,7 @@
+# This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
+
 """Unit tests for the medium module"""
+
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
@@ -43,7 +46,20 @@ def test_init(reset_singletons, name, default) -> None:
     obj = object()
     medium = Medium(**{name: obj})
     assert getattr(medium, name) == obj
-    _reset_singletons()
+
+
+@pytest.mark.parametrize(
+    ("name", "default"),
+    (
+        ("p", STANDARD_PRESSURE),
+        ("T", STANDARD_TEMPERATURE),
+        ("p_vac", STANDARD_VACUUM_PRESSURE),
+        ("mixture", None),
+        ("c", {}),
+    ),
+)
+def test_init_default_args(reset_singletons, name, default) -> None:
+    """Test init"""
     medium = Medium()
     if isinstance(default, float):
         assert getattr(medium, name) == pytest.approx(default)

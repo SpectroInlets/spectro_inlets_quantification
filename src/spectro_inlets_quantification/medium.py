@@ -5,7 +5,7 @@
 Medium, unlike the classes of .mixture, is conscious of temperature and pressure
 
 """
-from typing import Optional, Dict, TYPE_CHECKING
+from typing import Optional, Dict, TYPE_CHECKING, cast
 
 from .constants import STANDARD_TEMPERATURE, STANDARD_PRESSURE, STANDARD_VACUUM_PRESSURE
 from .tools import Singleton
@@ -72,7 +72,7 @@ class Medium(metaclass=Singleton):
     @property
     def mdict(self) -> "MoleculeDict":
         """Return the molecule dict"""
-        return self.mixture.mdict  # the one-and-only MoleculeDict
+        return cast("MoleculeDict", self.mixture.mdict)  # the one-and-only MoleculeDict
 
     @property
     def comp(self) -> "Composition":

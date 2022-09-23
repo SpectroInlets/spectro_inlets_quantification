@@ -1,4 +1,7 @@
+# This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
+
 """This module contains unit tests for tools.py"""
+
 from time import struct_time
 from unittest.mock import patch
 
@@ -12,6 +15,7 @@ from spectro_inlets_quantification.tools import (
     tstamp_to_date,
     make_axis,
     Singleton,
+    dict_equal_with_close_floats,
 )
 
 MASS_DATA = (
@@ -26,6 +30,7 @@ MASS_DATA = (
     ("_M32", None),
     ("AM32", None),
 )
+TOOLS_MOD = "spitze.quant.physics.tools"
 
 
 @mark.parametrize(("value", "result"), MASS_DATA)
@@ -101,3 +106,16 @@ def test_singleton_metaclass():
     assert MyClass() is MyClass()
     assert MyClass() is MyClass.alternative_constructor()
     assert MyClass.alternative_constructor() is MyClass()
+
+
+def test_dict_equal_with_close_floats():
+    """Test dict_equal_with_close_floats"""
+    assert dict_equal_with_close_floats({}, {1: 2}) is False
+    assert dict_equal_with_close_floats({1: 2}, {1: "2"}) is False
+    with raises(RuntimeError):
+        dict_equal_with_close_floats({"A": []}, {"A": []})
+    assert dict_equal_with_close_floats({1: 1.23}, {1: 1.23 + 1e-9}) is True
+    assert dict_equal_with_close_floats({1: 1.23}, {1: 1.23 + 1e-3}) is False
+    assert dict_equal_with_close_floats({1: False}, {1: True}) is False
+    assert dict_equal_with_close_floats({"A": {}}, {"A": {}}) is True
+    assert dict_equal_with_close_floats({"A": {}}, {"A": {1: 2}}) is False

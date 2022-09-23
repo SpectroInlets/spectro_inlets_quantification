@@ -1,7 +1,7 @@
-# config
+# peak
 
 ```{eval-rst}
-.. automodule:: spectro_inlets_quantification.config
+.. automodule:: spectro_inlets_quantification.peak
     :members:
     :special-members:
     :show-inheritance:

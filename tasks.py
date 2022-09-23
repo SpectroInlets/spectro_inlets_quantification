@@ -2,6 +2,7 @@
 
 import platform
 from pathlib import Path
+from shutil import rmtree
 
 from invoke import task
 
@@ -66,3 +67,25 @@ def dependencies(context):
     context.run("python -m pip install --upgrade pip")
     context.run("python -m pip install --upgrade -r requirements.txt")
     context.run("python -m pip install --upgrade -r requirements-dev.txt")
+
+
+
+CLEAN_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".mypy_cache", "build")
+
+
+@task
+def clean(context, dryrun=False):
+    """Clean the repository"""
+    if dryrun:
+        print("CLEANING DRYRUN")
+    for clean_pattern in CLEAN_PATTERNS:
+        for cleanpath in THIS_DIR.glob("**/" + clean_pattern):
+            if cleanpath.is_dir():
+                print("DELETE DIR :", cleanpath)
+                if not dryrun:
+                    rmtree(cleanpath)
+            else:
+                print("DELETE FILE:", cleanpath)
+                if not dryrun:
+                    cleanpath.unlink()
+                    pass

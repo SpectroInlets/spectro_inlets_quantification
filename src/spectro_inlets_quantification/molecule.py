@@ -4,23 +4,27 @@
 
 Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 
-    T: Temperature in [K]
-    p: pressure in [Pa]
-    M: molar mass in [g/mol]                                            # not SI!
-    D: diffusion constant in [m^2/s]
-        in water at standard conditions unless otherwise noted
-    Hcp: solubility constant (concentration/pressure) in [(mol/l)/bar]  # not SI!
-    H_0: Hcp at standard temperature in [(mol/l)/bar]                   # not SI!
-    T_c: temperature-dependence of Hcp in [K]
-    KH: volatility constant (pressure/concentration) in [Pa/(mol/m^3)]
-    sigma: ionization cross section in [Ang^2]                          # not SI!
-    beta: (fitted) exponent in the transmission function [dimensionless]
+* T: Temperature in [K]
+* p: pressure in [Pa]
+* M: molar mass in [g/mol] **NOTE**: Not SI!
+* D: diffusion constant in [m^2/s] in water at standard conditions unless otherwise noted
+* Hcp: solubility constant (concentration/pressure) in [(mol/l)/bar] **NOTE**: Not SI!
+* H_0: Hcp at standard temperature in [(mol/l)/bar] **NOTE**: Not SI!
+* T_c: temperature-dependence of Hcp in [K]
+* KH: volatility constant (pressure/concentration) in [Pa/(mol/m^3)]
+* sigma: ionization cross section in [Ang^2] **NOTE**: Not SI!
+* beta: (fitted) exponent in the transmission function [dimensionless]
 
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 
 """
 import json
+from functools import cached_property
 from pathlib import Path
+from typing import Optional, Dict, Callable, Any, cast, Union, TYPE_CHECKING
+
+from attrs import define, field, asdict, Attribute
+
 import numpy as np
 from .constants import (
     STANDARD_COLORS,
@@ -34,183 +38,148 @@ from .constants import (
 from .tools import make_axis, Singleton
 from .medium import Medium
 from .config import Config
+from .compatability import TypeAlias
 
+if TYPE_CHECKING:
+    from matplotlib import pyplot
 
 CONFIG = Config()
 
+MASS_TO_FLOAT: TypeAlias = Dict[str, float]
+PATH_OR_STR: TypeAlias = Union[Path, str]
+MASS: TypeAlias = str
+TRANSMISSION_AMPLIFICATION_FUNCTION: TypeAlias = Callable[[float], float]
 
-class MoleculeDict(dict, metaclass=Singleton):
-    def __init__(self, *args, medium=None, **kwargs):
+
+class MoleculeDict(dict, metaclass=Singleton):  # type: ignore
+    """This class implements the MoleculeDict
+
+    It is a mapping of molecule names to Molecule, which loads the Molecule, if it hasn't been
+    already.
+
+    .. warning::
+        This class overrides only `get` meaning that any methods that will create a new
+        dictionary, will create an ordinary dict and not a MoleculeDict
+
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        if not medium:
-            medium = Medium()  # this is likely THE place medium is defined.
-        self.medium = medium
+        self.medium = Medium()  # this is likely THE place medium is defined.
 
-    def get(self, key):  # Using this, a Molecule is loaded if not already there
-        """Return Molecule: Molecule.load(key) first time, the stored Molecule later."""
+    def get(self, key: str) -> "Molecule":  # type: ignore
+        """Return ``Molecule -> Molecule.load(key)`` first time, then stored `Molecule` later"""
         if key not in self:
-            self[key] = Molecule.load(key, medium=self.medium)
-        return self[key]
+            self[key] = Molecule.load(key)
+        return cast("Molecule", self[key])
 
 
 # ---------  the class ------------- #
+@define(slots=False)
 class Molecule:
-    """The Molecule class. Interfaces with physical and chemical data."""
+    """The Molecule class. Interfaces with physical and chemical data.
 
-    def __init__(
-        self,
-        *,
-        name=None,
-        formula=None,
-        spectrum=None,
-        spectrum_0=None,
-        molecule_diameter=None,
-        dynamic_viscosity=None,
-        density_RTP=None,
-        D_gas_RTP=None,
-        M=None,
-        D=None,
-        H_0=None,
-        T_c=None,
-        sigma=None,
-        T=None,
-        p=None,
-        primary=None,
-        T_of_M=None,
-        beta=None,
-        E_ion=STANDARD_IONIZATION_ENERGY,
-        thermo=None,
-        medium=None,
-        verbose=False,
-        **kwargs,
-    ):
-        """Create a Molecule object given its properties
+    Args:
+        name (str): Name of the molecule. Equal to the file name (minus extension)
+            in the molecule data directory. Some are formulas, e.g. "CH4", and
+            others are full names, e.g. "propionic acid".
+        real_name (str): The real name of the molecule
+        formula (str): Formula indicating which atoms are in the molecule
+        spectrum (dict): {M: I_M} where I_M where M is a mass string (e.g. "M32")
+            and I_M of is the (relative) intensity at that mass in the molecule's
+            active spectrum. Allowed to change, unlike spectrum_0.
+        spectrum_0 (dict): {M: I_M} for the reference spectrum.
+        molecule_diameter (float): Gas-phase molecule diameter in [m]
+        dynamic_viscosity (float): Gas-phase dynamic viscosity in [Pa*s]
+        density_RTP (float): Gas-phase density at standard conditions in [kg/m^3]
+        D_gas_RTP (float): Gas-phase diffusion constant at std. conds. in [m^2/s]
+        M (float): Molecular mass in [g/mol]
+        D (float): Liquid-phase diffusion constant at std. conds. in [m^2/s]
+        H_0 (float): Henry's-Law solubility (concentration/pressure) constant at
+            standard T in [(mol/l)/bar]
+        T_c (float): Constant of Henry's-Law temperature dependence in [K]
+        sigma (dict): {E_ion: sigma(E_ion)} where E_ion is ionization energy in
+            [eV] and sigma(E_ion) is the ionization cross section in [AA^2]
+        primary (str): Default mass for calibration (e.g. "M32")
+        beta (float): Exponent to the transmission-amplification function
+        E_ion (int): Internal condition - ionization energy
+        thermo (dict): Themochemistry data including standard enthalpy of formation
+            in [kJ/mol] and standard entropy in [J/(mol*K)] for various phases.
+        kH (float): Obsolete, will be removed in a future version
+        T_of_M (function): Transmission-amplification function, a function of mass
+             by which to weigh intensities in the spectra. If one is not given, but beta is, a
+             default transmission-amplification function will be created with the formula:
+             T_of_M(M) = M ** beta
+        verbose (bool): Whether to print stuff to the terminal
 
-        Args:
-            name (str): Name of the molecule. Equal to the file name (minus extension)
-                in the molecule data directory. Some are formulas, e.g. "CH4", and
-                others are full names, e.g. "propionic acid". TODO: consistency on that?
-            formula (str): Formula indicating which atoms are in the molecule
-            spectrum (dict): {M: I_M} where I_M where M is a mass string (e.g. "M32")
-                and I_M of is the (relative) intensity at that mass in the molecule's
-                active spectrum. Allowed to change, unlike spectrum_0.
-            spectrum_0 (dict): {M: I_M} for the reference spectrum.
-            molecule_diameter (float): gas-phase molecule diameter in [m]
-            dynamic_viscosity (float): gas-phase dynamic viscosity in [Pa*s]
-            density_RTP (float): gas-phase density at standard conditions in [kg/m^3]
-            D_gas_RTP (float): gas-phase diffusion constant at std. conds. in [m^2/s]
-            M (float): molecular mass in [g/mol] TODO: Change this from common to SI?
-            D (float): liquid-phase diffusion constant at std. conds. in [m^2/s]
-            H_0 (float): Henry's-Law solubility (concentration/pressure) constant at
-                standard T in [(mol/l)/bar] TODO: Change this from common to SI units?
-            T_c (float): Constant of Henry's-Law temperature dependence in [K]
-            sigma (dict): {E_ion: sigma(E_ion)} where E_ion is ionization energy in
-                [eV] and sigma(E_ion) is the ionization cross section in [AA^2]
-            T (float): external condition - temperature in [K]
-            p (float): external condition - pressure in [Pa]
-            primary (str): default mass for calibration (e.g. "M32")
-            T_of_M (function): transmission-amplification function, a function of mass
-                by which to weigh intensities in the spectrum
-            beta (float): exponent to the transmission-amplification function
-            E_ion (float): internal condition - ionization energy
-            thermo (dict): themochemistry data including standard enthalpy of formation
-                in [kJ/mol] and standard entropy in [J/(mol*K)] for various phases.
-            medium (Medium): stores the p and T
-            verbose (bool): whether to print stuff to the terminal
-            kwargs: additional kwargs are set as attributes.
-        """
-        # basic stuff
-        self.name = name
-        self.formula = formula
-        self.M = M
+    """
 
-        # gas transport properties
-        self.molecule_diameter = molecule_diameter
-        self.dynamic_viscosity = dynamic_viscosity
-        self.density_RTP = density_RTP
-        self.D_gas_RTP = D_gas_RTP
+    name: Optional[str] = field(default=None)
+    real_name: Optional[str] = field(default=None)
+    formula: Optional[str] = field(default=None)
+    spectrum: Optional[MASS_TO_FLOAT] = field(default=None)
+    spectrum_0: Optional[MASS_TO_FLOAT] = field(default=None)
+    molecule_diameter: Optional[float] = field(default=None)
+    dynamic_viscosity: Optional[float] = field(default=None)
+    density_RTP: Optional[float] = field(default=None)
+    D_gas_RTP: Optional[float] = field(default=None)
+    M: Optional[float] = field(default=None)
+    D: Optional[float] = field(default=None)
+    H_0: Optional[float] = field(default=None)
+    T_c: Optional[float] = field(default=None)
+    sigma: Dict[int, float] = field(default=None)
+    primary: Optional[str] = field(default=None)
+    beta: Optional[float] = field(default=None)
+    E_ion: Optional[int] = field(default=STANDARD_IONIZATION_ENERGY)
+    thermo: Optional[Dict[str, Dict[str, float]]] = field(default=None)
+    kH: Optional[float] = field(default=None)
+    T_of_M: Optional[TRANSMISSION_AMPLIFICATION_FUNCTION] = field(
+        default=None, metadata={"serialize": False}
+    )
+    verbose: Optional[bool] = field(default=False, metadata={"serialize": False})
 
-        # liquid phase transport properties
-        self.D = D
-        self.H_0 = H_0
-        self.T_c = T_c
+    # Initialize properties, which are not passed into init as arg
+    corr_spectrum: Optional[MASS_TO_FLOAT] = field(init=False, default=None)
+    H: Optional[float] = field(init=False, default=None)
+    n_dot_0: Optional[float] = field(init=False, default=None)
+    medium: Medium = field(init=False, factory=Medium)
 
-        # thermochemistry properties
-        self.thermo = thermo
+    def __attrs_post_init__(self) -> None:
+        """Update initialized values after ``__init__``"""
+        if self.spectrum is None and self.spectrum_0 is not None:
+            self.spectrum = self.spectrum_0.copy()
 
-        # ionization-fragmentation properties:
-        self.sigma = sigma
-        self.spectrum = spectrum  # spectrum may be corrected
-        self.norm_spectrum = self.calc_norm_spectrum()  # normalizes self.spectrum
-        self.corr_spectrum = None  # to be set later
-        if spectrum_0 is None:
-            spectrum_0 = spectrum.copy()
-        self.spectrum_0 = spectrum_0
+        if self.T_of_M is None and self.beta is not None:
 
-        # mass spec options (can be in the file)
-        self.primary = primary
+            def T_of_M(M: float) -> float:
+                return cast(float, M**self.beta)
 
-        # mass spec options (shouldn't be in the file)
-        self.T_of_M = T_of_M
-        self.beta = beta
-        self.E_ion = E_ion
+            self.T_of_M = T_of_M
 
-        # mass transport properties that involve knowledge of outside world
-        self.H = None  # mass transfer number [m^3/s], possibly set/used later
-        self.n_dot_0 = None  # total capillary flux [mol/s], possibly set/used later
+    def as_dict(self) -> Dict[str, Any]:
+        """Return a dictionary including everything needed to recreate self"""
 
-        if not medium:
-            medium = Medium(p=p, T=T)
-        self.medium = medium
+        def should_serialize(attribute: Attribute, _: Any) -> bool:  # type: ignore
+            """Filter function that makes sure that only attributes that can be init'ed and
+            have not been marked as don't serialize are included in as_dict version"""
+            return attribute.init and attribute.metadata.get("serialize", True)
 
-        self.verbose = verbose
+        return asdict(self, filter=should_serialize)
 
-        # whatever I missed
-        for key, value in kwargs.items():
-            if not hasattr(self, key):
-                setattr(self, key, value)
-            else:
-                raise RuntimeError(
-                    f"you tried to set {key} while initializing a Molecule, but it "
-                    f"already has self.{key} = {getattr(self, key)}"
-                )
+    @cached_property
+    def norm_spectrum(self) -> MASS_TO_FLOAT:
+        """Normalized version of self.spectrum"""
+        return self.calc_norm_spectrum()
 
-    def as_dict(self):
-        """Return a dictionary including everything needed to recreate self."""
-        self_as_dict = {}
-
-        # basic stuff:
-        self_as_dict.update(name=self.name, formula=self.formula, M=self.M)
-
-        # gas transport properties:
-        self_as_dict.update(
-            molecule_diameter=self.molecule_diameter,
-            dynamic_viscosity=self.dynamic_viscosity,
-            density_RTP=self.density_RTP,
-            D_gas_RTP=self.D_gas_RTP,
-        )
-
-        # liquid phase transport properties:
-        self_as_dict.update(D=self.D, H_0=self.H_0, T_c=self.T_c)
-
-        # thermochemistry properties:
-        self_as_dict.update(thermo=self.thermo)
-
-        # ionization-fragmentation properties:
-        self_as_dict.update(sigma=self.sigma, spectrum=self.spectrum)
-
-        # mass spec options (can be in the file):
-        self_as_dict.update(primary=self.primary)
-
-        return self_as_dict
-
-    def save(self, mol_dir=None, file_name=None):
-        """save the self.as_dict() form of the molecule to a .json file
+    def save(
+        self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None
+    ) -> None:
+        """Save the `as_dict` form of the molecule to a .json file
 
         Args:
-            file_name: name of the .json file. filename.endswith(".json")
-            mol_dir: path to directory to save molecule in, defaults to
+            mol_dir: Path to directory to save molecule in, defaults to
                 :attr:`Config.molecule_directory`
+            file_name: Name of the .json file, including the file extension ".json"
         """
         mol_dir = mol_dir or CONFIG.molecule_directory
         if file_name is None:
@@ -221,12 +190,14 @@ class Molecule:
             json.dump(self_as_dict, json_file, indent=4)
 
     @classmethod
-    def load(cls, file_name, mol_dir=None, **kwargs):
-        """loads a chip object from a .json file
+    def load(
+        cls, file_name: str, mol_dir: Optional[PATH_OR_STR] = None, **kwargs: Any
+    ) -> "Molecule":
+        """loads a molecule object from a .json file
 
         Args:
-            file_name: name of the .json file. filename.endswith(".json")
-            mol_dir: path to directory to save molecule in, defaults to
+            file_name: Name of the .json file WITHOUT the ".json" extension
+            mol_dir: Path to directory to save molecule in, defaults to
                 :attr:`Config.molecule_directory`
             kwargs: (other) key word arguments are fed to Molecule.__init__()
 
@@ -239,7 +210,7 @@ class Molecule:
             self_as_dict = json.load(json_file)
         self_as_dict.update(kwargs)
         # Unfortunately, saving and loading a dict with integer keys to json
-        #   turns the keys into strings. This fixes that:
+        # turns the keys into strings. This fixes that:
         try:
             self_as_dict["sigma"] = dict(
                 [(int(key), value) for key, value in self_as_dict["sigma"].items()]
@@ -248,8 +219,8 @@ class Molecule:
             print(f"Warning!!! {file_name} has sigma={self_as_dict['sigma']}.")
         return cls(**self_as_dict)
 
-    def update(self, **kwargs):
-        """set attributes given as kwargs, but update rather than replacing dicts"""
+    def update(self, **kwargs: Any) -> None:
+        """Set attributes given as kwargs, but update rather than replacing dicts"""
         for key, value in kwargs.items():
             if isinstance(value, dict):
                 try:
@@ -260,40 +231,25 @@ class Molecule:
             setattr(self, key, value)
 
     @property
-    def T(self):
-        return self.medium.T
-
-    @T.setter
-    def T(self, T):
-        self.medium.T = T
-
-    @property
-    def p(self):
-        return self.medium.p
-
-    @p.setter
-    def p(self, p):
-        self.medium.p = p
-
-    @property
-    def eta(self):
-        """Pseudonymn for dynamic_viscosity in [Pa*s]"""
+    def eta(self) -> Optional[float]:
+        """Pseudonym for 'dynamic_viscosity' in [Pa*s]"""
         return self.dynamic_viscosity
 
     @property
-    def s(self):
-        """Pseudonym for molecular_diameter in [m]"""
+    def s(self) -> Optional[float]:
+        """Pseudonym for 'molecular_diameter' in [m]"""
         return self.molecule_diameter
 
     @property
-    def m(self):
+    def m(self) -> float:
         """The molecule mass in [kg]"""
         M = self.M
         m = M * 1e-3 / AVOGADRO_CONSTANT  # from g/mol to kg
         return m
 
-    def get_primary(self):
-        """Return the default mass for quantification: pre-defined or max of spectrum"""
+    def get_primary(self) -> MASS:
+        """Return the default mass for quantification: Pre-defined as ``self.primary`` or max of
+        spectrum"""
         if self.primary is not None:
             return self.primary
         if self.spectrum is not None:
@@ -301,23 +257,18 @@ class Molecule:
             index = np.argmax(values)
             return masses[index]
 
-    def calc_sigma(self, E_ion=None):
+    def calc_sigma(self, E_ion: Optional[int] = None) -> float:
         """Return the ionization cross-section [A^2] given the ionization energy [eV]
-
-        TODO: there's some naming and type confusion here. Molecule.calc_sigma returns a
-            float, but Molecule.sigma is a dict with numbers as keys (integer in
-            practice, but float in principle). I think Molecule.sigma should change to a
-            list of tuples and be renamed. Docstring to be fixed after decision on this.
 
         Checks if E_ion (e.g. 80) is in the keys of self.sigma (e.g. {70:1.5, 100:4.5}),
         returns self.sigma[E_ion] if it is and otherwise interpolates (e.g. getting 2.5)
 
         Args:
-            E_ion (float): ionization energy in [eV]
+            E_ion (float): Ionization energy in [eV]
 
         Raises:
-            TypeError if interpolation fails
-            AttributeError if interpolation results in a negative value
+            TypeError: If interpolation fails
+            AttributeError: If interpolation results in a negative value
 
         Returns:
             float: The ionization cross-section in [A^2]
@@ -344,25 +295,28 @@ class Molecule:
                 if self.verbose:
                     print(
                         f"Warning! You want E_ion={E_ion} from {self.name} which has "
-                        f"sigma={sigma}. Doing my best."
+                        f"sigma={sigma}. Using data endpoint nearest requested value."
                     )
             try:
-                sigma = np.interp(
-                    E_ion,
-                    E,
-                    sig,
-                )  # left=-1, right=-1  #
+                sigma_single = cast(
+                    float,
+                    np.interp(
+                        E_ion,
+                        E,
+                        sig,
+                    ),
+                )
             except TypeError:
                 print(f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}")
                 raise TypeError
-            if sigma < 0:
+            if sigma_single < 0:
                 raise AttributeError(
-                    f"Can't get E_ion={E_ion} from {self.name} with sigma={self.sigma}"
+                    f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}"
                 )
 
-            return sigma
+            return sigma_single
 
-    def calc_norm_spectrum(self):
+    def calc_norm_spectrum(self) -> MASS_TO_FLOAT:
         """Return and set the normalized active spectrum as a dict {M:I_M}"""
         spectrum = self.spectrum
         total_intensity = sum(list(spectrum.values()))
@@ -372,13 +326,19 @@ class Molecule:
         self.norm_spectrum = norm_spectrum
         return norm_spectrum
 
-    def correct_spectrum(self, T_of_M=None, beta=None):
+    def correct_spectrum(
+        self,
+        T_of_M: Optional[TRANSMISSION_AMPLIFICATION_FUNCTION] = None,
+        beta: Optional[float] = None,
+    ) -> None:
         """Set self.spectrum to a transmission-amplification-weighted spectrum
 
         Args:
-            T_of_M (function): The transmission-amplification function
+            T_of_M (function): The transmission-amplification function, defaults to self.T_of_M
+                if not set
             beta (float): The exponent to the transmission-amplification function,
-                used if T_of_M is not given.
+                used if T_of_M is not given. NOTE: This values will be set via `set_beta`,
+                which generates a new ``self.T_of_M`` even if T_of_M is given as an argument.
 
         Returns:
             dict: {M:I_M} where I_M is intensity at mass M in the corrected spectrum
@@ -391,30 +351,29 @@ class Molecule:
             self.T_of_M = T_of_M
         self.spectrum = self.calc_corr_spectrum(T_of_M=T_of_M)
 
-    def set_beta(self, beta):
+    def set_beta(self, beta: float) -> None:
         """Set transmission-amplification function via its exponent"""
         self.beta = beta
 
-        def T_of_M(M):
-            return M**beta
+        def T_of_M(M: float) -> float:
+            return cast(float, M**beta)
 
         self.T_of_M = T_of_M
 
-    def calc_corr_spectrum(self, T_of_M=None):
+    def calc_corr_spectrum(
+        self, T_of_M: Optional[TRANSMISSION_AMPLIFICATION_FUNCTION] = None
+    ) -> MASS_TO_FLOAT:
         """Correct the spectrum by weighing by a transmission-amplification function
-
-        For an explanation and usage example, see slides 28-29 of:
-        .../Quantification/Reports/20D14_Quantification_Halfway_Report.pptx
 
         This function stores the corrected spectrum as self.corr_spectrum, doesn't touch
         self.spectrum.
 
         Args:
-            T_of_M (function): transmission-amplification function
+            T_of_M (function): Transmission-amplification function
 
         Returns:
             dict: {M: I_M} with I_M being the intensity at mass M in the normalized and
-                corrected spectrum.
+            corrected spectrum
         """
         if T_of_M is None:
             T_of_M = self.get_T_of_M()
@@ -432,21 +391,28 @@ class Molecule:
         return corr_spectrum
 
     def plot_spectrum(
-        self, norm=False, T_of_M=None, top=1, width=0.5, offset=0, ax="new", **kwargs
-    ):
+        self,
+        norm: Optional[bool] = False,
+        T_of_M: Optional[TRANSMISSION_AMPLIFICATION_FUNCTION] = None,
+        top: Optional[float] = 1,
+        width: Optional[float] = 0.5,
+        offset: Optional[float] = 0,
+        ax: Union[str, "pyplot.Axes"] = "new",
+        **kwargs: Any,
+    ) -> "pyplot.Axes":  # pragma: no cover
         """Plots the molecule's reference mass spectrum
 
         Args:
-            norm (bool): whether to normalize to the sum of the peaks
-            T_of_M (function): transmission-amplification function
-            top (float): height of the highest peak in the plot
-            width (float): width of the bars in the plot (arg to matplotlib.pyplot.bar)
+            norm (bool): Whether to normalize to the sum of the peaks
+            T_of_M (function): Transmission-amplification function
+            top (float): Height of the highest peak in the plot
+            width (float): Width of the bars in the plot (arg to matplotlib.pyplot.bar)
             offset (float): How much to shift bars on m/z axis (useful for co-plotting)
-            ax (str or matplotlib Axis): axis to use. Default "new" creates a new one.
-            kwargs (str): key word arguments passed to (arg to matplotlib.pyplot.bar)
+            ax (str or matplotlib Axis): Axis to use. Default "new" creates a new one.
+            kwargs (str): Key word arguments passed to (arg to matplotlib.pyplot.bar)
 
         Returns:
-            matplotlib Axes: the axes on which the spectrum was plotted
+            matplotlib Axes: The axes on which the spectrum was plotted
         """
 
         if T_of_M is not None:
@@ -460,6 +426,7 @@ class Molecule:
             ax.set_xlabel("m/z")
             ax.set_ylabel("norm. intensity")
             ax.set_title(f"{self.name} reference spectrum")
+        ax = cast("pyplot.Axes", ax)
         if norm:
             factor = 1 / sum(spectrum.values())
         else:
@@ -471,21 +438,25 @@ class Molecule:
             ax.bar(M + offset, value * factor, width=width, **kwargs)
         return ax
 
-    def get_color(self):
-        """Return the molecule's color = the EC-MS standard color of its primary mass"""
+    def get_color(self) -> str:
+        """Return the molecule's color = the EC-MS standard color of its primary mass
+
+        Standard colors are stored in `constants.STANDARD_COLORS`
+
+        """
         if self.name in STANDARD_MOL_COLORS:
             return STANDARD_MOL_COLORS[self.name]
         primary = self.get_primary()
         return STANDARD_COLORS.get(primary, "k")
 
-    def get_T_of_M(self):
+    def get_T_of_M(self) -> TRANSMISSION_AMPLIFICATION_FUNCTION:
         """Return the active transmission-amplification function"""
         if hasattr(self, "T_of_M") and self.T_of_M is not None:
             return self.T_of_M
         elif hasattr(self, "beta") and self.beta is not None:
 
-            def T_of_M(M):
-                return M**self.beta
+            def T_of_M(M: float) -> float:
+                return cast(float, M**self.beta)
 
             return T_of_M
         else:
@@ -493,24 +464,24 @@ class Molecule:
                 f"Molecule {self.name} has no attr 'T_of_M' or 'beta', or both are None"
             )
 
-    def calc_Hcp(self, T):
+    def calc_Hcp(self, T: Optional[float]) -> float:
         """Returns the solubility Henry's-Law constant in Sanders units: [(mol/l) / bar]
 
         Solubility is also called concentration/pressure (cp), thus the cp in Hcp.
-        To get volatility (pc) SI units: Take the reciprocal and multiply by 100, or use
+        To get volatility (pc) in SI units: Take the reciprocal and multiply by 100, or use
         Molecule.calc_KH(T) instead.
         This function uses data copied over to the molecule file from Sanders'
         Henry's-Law compilation.
 
         Args:
-            T (float): Temperature in [K]. By default uses self.T
+            T (float): Temperature in [K], ``self.medium.T`` by default.
 
         Returns:
             float: Hcp in [(mol/l) / bar]
         """
         if T is None:
-            T = self.T
-        # Example: 1.2E-03 * EXP(   1700.*(1./298.15-1./T))
+            T = self.medium.T
+        # Example: 1.2E-03 * EXP( 1700.*(1./298.15-1./T) )
         T_c = self.T_c
         H_0 = self.H_0
         if T_c is None:
@@ -521,7 +492,7 @@ class Molecule:
                 d_vap_H = (dfH0["gas"] - dfH0["liquid"]) * 1e3
             except KeyError:
                 if self.verbose:
-                    print("assuming no temperature dependence")
+                    print("Assuming no temperature dependence")
                 T_c = 0
             else:
                 if self.verbose:
@@ -537,17 +508,17 @@ class Molecule:
                 d_vap_S = S0["gas"] - S0["liquid"]  # in J/(mol*K)
             except KeyError:
                 if self.verbose:
-                    print("assuming zero volatility")
+                    print("Assuming zero volatility")
                 H_0 = 0
             else:
                 if self.verbose:
-                    print(r"using ($\Delta_{vap}$G) and the molar density instead")
+                    print(r"Using ($\Delta_{vap}$G) and the molar density instead")
                 d_vap_G = d_vap_H - STANDARD_TEMPERATURE * d_vap_S  # in J/mol
                 if hasattr(self, "rho_l"):
-                    rho_l = self.rho_l
+                    rho_l: float = self.rho_l  # type: ignore
                 else:
                     if self.verbose:
-                        print("assuming 1000 kg/m^3 (same density as water)")
+                        print("Assuming 1000 kg/m^3 (same density as water)")
                     rho_l = 1e3
                 c_0 = rho_l * 1e3 / self.M  # g/m^3 / [g/mol] = mol/m^3
                 H_0 = (
@@ -555,42 +526,55 @@ class Molecule:
                 )  # (mol/m^3)/bar * m^3/l
                 # sign: more positive d_vap_G means it likes being liquid,
 
-        H = H_0 * np.exp(T_c * (1.0 / T - 1.0 / STANDARD_TEMPERATURE))
+        H = H_0 * cast(float, np.exp(T_c * (1.0 / T - 1.0 / STANDARD_TEMPERATURE)))
         return H
 
-    def calc_KH(self, T=None):
-        """Return the volatility Henry's-Law constant at in SI units [Pa/[mol/m^3]]"""
+    def calc_KH(self, T: Optional[float] = None) -> float:
+        """Return the volatility Henry's-Law constant in SI units [Pa/[mol/m^3]]
+
+        T will default to `self.medium.T` if not given
+
+        """
         Hcp = self.calc_Hcp(T=T)  # in M/bar
         KH = 100 / Hcp  # in Pa/mM = ([Pa/bar]*[M/mM]) / [M/bar]
         # ^ where the unit converter is (100 [Pa/bar]*[M/mM]) = 1
         return KH
 
-    def calc_H(self, n_dot_0, p=None, T=None):
+    def calc_H(
+        self,
+        n_dot_0: Optional[float],
+        p: Optional[float] = None,
+        T: Optional[float] = None,
+    ) -> float:
         """Return the molecule's mass-transfer number in [m^3/s]
 
         Args:
-            n_dot_0 (float): the total flux through the capillary of the chip in [mol/s]
-            p (float): The pressure in [Pa]
-            T (float): The temperature in [K]
+            n_dot_0 (float): The total flux through the capillary of the chip in [mol/s]
+            p (float): The pressure in [Pa], defaults to `self.medium.p` if not given
+            T (float): The temperature in [K], defaults to `self.medium.T` if not given
 
         Returns:
-            float: mass-transfer number, i.e. ratio of flux to concentration in [m^3/s]
+            float: Mass-transfer number, i.e. ratio of flux to concentration in [m^3/s]
         """
         if n_dot_0 is None:
             n_dot_0 = self.n_dot_0
         else:
             self.n_dot_0 = n_dot_0
         KH = self.calc_KH(T=T)
-        p = p or self.p
+        p = p or self.medium.p
         H = KH * n_dot_0 / p
         # [m^3/s] = [Pa/(mol/m^3)] * [mol/s] / [Pa]
         self.H = H
         return H
 
-    def calc_p_vap(self, T=None):
-        """Return the vapor pressure of the molecule in [Pa] given temperature in [K]"""
+    def calc_p_vap(self, T: Optional[float] = None) -> float:
+        """Return the vapor pressure of the molecule in [Pa] given temperature in [K]
+
+        T defaults to `self.medium.T if not given
+
+        """
         if T is None:
-            T = self.T
+            T = self.medium.T
         try:
             dfH0 = self.thermo["dfH0"]
             S0 = self.thermo["S0"]
@@ -598,19 +582,19 @@ class Molecule:
             dS = S0["gas"] - S0["liquid"]
         except KeyError:
             print(
-                f"{self.name} does not have the"
-                + "thermochem data needed to calculate p_vap! Returning 0."
+                f"{self.name} does not have the "
+                "thermochem data needed to calculate p_vap! Returning 0."
             )
             return 0
 
         p0 = 1e5  # [Pa]
 
-        p_vap = p0 * np.exp(-dH / (GAS_CONSTANT * T) + dS / GAS_CONSTANT)
+        p_vap = p0 * cast(float, np.exp(-dH / (GAS_CONSTANT * T) + dS / GAS_CONSTANT))
 
         return p_vap
 
     @property
-    def pKa(self):
+    def pKa(self) -> float:
         """Return the pKa above or below which (see pKa_description) self is volatile"""
         pKa, description = PKAS.get(self.name, (None, None))
         if self.verbose:
@@ -621,15 +605,15 @@ class Molecule:
         return pKa
 
     @property
-    def pKa_description(self):
-        """Return str explaining pKa is relevance (volatile at pH above/below pKa)"""
+    def pKa_description(self) -> str:
+        """Return str specifying whether the volatile compound is at pH below or above pKa"""
         pKa, description = PKAS.get(self.name, (None, None))
         return description
 
-    def calc_volatile_portion(self, pH):
+    def calc_volatile_portion(self, pH: float) -> float:
         """Return the fraction in the volatile form of mol as a function of pH"""
         pKa, description = PKAS.get(self.name, (None, None))
-        HA_to_A_ratio = np.power(10, pKa - pH)
+        HA_to_A_ratio = cast(float, np.power(10, pKa - pH))
         portion_HA = HA_to_A_ratio / (1 + HA_to_A_ratio)
         if description == "volatile below":
             return portion_HA

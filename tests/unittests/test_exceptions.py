@@ -1,3 +1,5 @@
+# This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
+
 """This module contains unit tests for exceptions.py"""
 
 import inspect

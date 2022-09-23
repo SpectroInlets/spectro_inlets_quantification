@@ -1,4 +1,7 @@
+# This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
+
 """Unit tests for the config module"""
+
 from pathlib import Path
 
 import pytest

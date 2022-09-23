@@ -23,7 +23,7 @@ author = "Spectro Inlets Software Team"
 
 # The full version, including alpha/beta/rc tags
 release = "1.1"
-
+default_role = "any"
 
 # -- General configuration ---------------------------------------------------
 
@@ -34,7 +34,16 @@ extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_proof",
 ]
+
+intersphinx_mapping = {
+    # "python": ("https://docs.python.org/3", None),
+    # "pandas": ("https://pandas.pydata.org/docs/", None),
+    # "numpy": ("https://numpy.org/doc/stable/", None),
+    # "matplotlib": ("https://matplotlib.org/stable/", None),
+}
 
 # Myst extensions
 myst_enable_extensions = [
@@ -52,7 +61,20 @@ myst_enable_extensions = [
     "substitution",
     "tasklist",
 ]
+
+myst_substitutions = {
+    "CH4": "CH$_4$",
+    "O2": "O$_2$",
+    "C2H4": "C$_2$H$_4$",
+    "He": "He",
+    "H2": "H$_2$",
+    "N2": "N$_2$",
+    "Cl2": "Cl$_2$",
+    "H2O": "H$_2$O",
+    "CO2": "CO_2",
+}
 suppress_warnings = ["myst.strikethrough"]
+numfig = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

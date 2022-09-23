@@ -12,6 +12,7 @@
 maxdepth: 2
 caption: Contents
 ---
+theory/quant_ms.md
 api.md
 ```
 

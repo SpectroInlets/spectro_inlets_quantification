@@ -95,7 +95,7 @@ class Quantifier:
         self.chip = chip
         self.chip.carrier = carrier  # this will make sure it's a Gas object.
         chip.medium = self.medium
-        self.mdict = MoleculeDict(medium=self.medium)
+        self.mdict = MoleculeDict()
 
         # ------- the calibration and SensitivityMatrix -------------- #
         cal_dir = cal_dir or CONFIG.calibration_directory

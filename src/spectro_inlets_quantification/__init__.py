@@ -74,7 +74,7 @@ from .medium import Medium
 from .molecule import Molecule, MoleculeDict
 from .mixture import Mixture, Gas
 from .chip import Chip
-from .signal import SignalDict, SignalProcessor, PeakSeries
+from .signal import SignalDict, SignalProcessor
 from .sensitivity import SensitivityFactor, SensitivityList, SensitivityMatrix
 from .calibration import Calibration, CalPoint
 from .quantifier import Quantifier
