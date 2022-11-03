@@ -1,0 +1,11 @@
+numpy
+scipy
+matplotlib
+pandas
+attrs
+invoke
+sphinx
+myst-parser
+sphinx-rtd-theme
+pytest
+git+https://github.com/executablebooks/sphinx-proof@d37495f
