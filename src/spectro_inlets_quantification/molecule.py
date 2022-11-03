@@ -532,7 +532,7 @@ class Molecule:
     def calc_KH(self, T: Optional[float] = None) -> float:
         """Return the volatility Henry's-Law constant in SI units [Pa/[mol/m^3]]
 
-        T will default to `self.medium.T` if not given
+        T will default to :attr:`self.medium.T` if not given
 
         """
         Hcp = self.calc_Hcp(T=T)  # in M/bar
@@ -550,8 +550,8 @@ class Molecule:
 
         Args:
             n_dot_0 (float): The total flux through the capillary of the chip in [mol/s]
-            p (float): The pressure in [Pa], defaults to `self.medium.p` if not given
-            T (float): The temperature in [K], defaults to `self.medium.T` if not given
+            p (float): The pressure in [Pa], defaults to :attr:`self.medium.p` if not given
+            T (float): The temperature in [K], defaults to :attr:`self.medium.T` if not given
 
         Returns:
             float: Mass-transfer number, i.e. ratio of flux to concentration in [m^3/s]
@@ -570,7 +570,7 @@ class Molecule:
     def calc_p_vap(self, T: Optional[float] = None) -> float:
         """Return the vapor pressure of the molecule in [Pa] given temperature in [K]
 
-        T defaults to `self.medium.T if not given
+        T defaults to :attr:`self.medium.T` if not given
 
         """
         if T is None:
