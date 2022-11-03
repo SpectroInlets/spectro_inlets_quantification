@@ -17,7 +17,9 @@ build:
       - echo "Command run at 'post_build' step"
       - echo `date`
     post_install:
-      - cd /tmp/
-      - git clone https://github.com/executablebooks/sphinx-proof
-      - cd sphinx-proof/
-      - pip install -e .
+      - /home/docs/checkouts/readthedocs.org/user_builds/spectroinlets-spectro-inlets-quantification/envs/$READTHEDOCS_VERSION/bin/python -m pip install --no-cache-dir git+https://github.com/executablebooks/sphinx-proof@d37495f
+
+# Optionally declare the Python requirements required to build your docs
+python:
+   install:
+   - requirements: requirements-rtd.txt
