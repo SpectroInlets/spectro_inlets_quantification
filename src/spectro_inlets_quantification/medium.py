@@ -12,7 +12,8 @@ from .tools import Singleton
 
 if TYPE_CHECKING:
     from .molecule import MoleculeDict
-    from .mixture import Mixture, Composition
+    from .mixture import Mixture
+    from .custom_types import COMPOSITION
 
 MOLECULE_TO_CONCENTRATION = Dict[str, float]
 
@@ -72,9 +73,9 @@ class Medium(metaclass=Singleton):
     @property
     def mdict(self) -> "MoleculeDict":
         """Return the molecule dict"""
-        return cast("MoleculeDict", self.mixture.mdict)  # the one-and-only MoleculeDict
+        return self.mixture.mdict  # the one-and-only MoleculeDict
 
     @property
-    def comp(self) -> "Composition":
+    def comp(self) -> "COMPOSITION":
         """Return the composition"""
         return self.mixture.comp  # the one-and-only relevant composition

@@ -13,7 +13,7 @@ THIS_DIR = Path(__file__).parent
 class Config(metaclass=Singleton):
     """Configuration objects"""
 
-    def __init__(self, data_directory: Path = THIS_DIR.parent / "data"):
+    def __init__(self, data_directory: Path = THIS_DIR / "data"):
         self._data_directory = Path(data_directory)
 
     @property

@@ -7,7 +7,7 @@ from unittest.mock import patch, mock_open
 from attr import fields
 from pytest import approx, fixture, mark
 
-from spitze.quant import Medium
+from spectro_inlets_quantification.medium import Medium
 from spectro_inlets_quantification.config import Config
 from spectro_inlets_quantification.molecule import MoleculeDict, Molecule
 

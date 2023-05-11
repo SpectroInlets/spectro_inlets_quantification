@@ -37,7 +37,7 @@ def gauss_peak(peak):
     return GaussPeak(**kwargs)
 
 
-PEAK_MOD = "spitze.quant.physics.peak"
+PEAK_MOD = "spectro_inlets_quantification.peak"
 
 
 class TestPeak:

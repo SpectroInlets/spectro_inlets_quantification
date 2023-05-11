@@ -3,25 +3,34 @@
 """Master module for handling results of calibration experiment
 
 Classes here inherit from classes in sensitivity.
-Equivalently initiating a `SensitivityList` from a `sf_list` of `SensitivityFactors`,
-the way to make a calibration during dev-time is to add `CalPoints` to a `cal_list` and
+
+Equivalently initiating a `SensitivityList` from a ``sf_list`` of SensitivityFactors,
+the way to make a calibration during dev-time is to add CalPoints to a `cal_list` and
 then use that to initiate a `Calibration`.
 """
 from pathlib import Path
+from typing import Dict, List, Union, Optional, Any, cast, TYPE_CHECKING
+
 import attr
 import json
 import time
 from .constants import STANDARD_MOL_COLORS
+from .custom_types import JSONVALUE, PATHLIKE, MOLLIST, MASSLIST, MOL, MASS
 from .tools import TODAY, mass_to_setting, mass_to_M, make_axis
-from .molecule import MoleculeDict
+from .molecule import MoleculeDict, Molecule
 from .sensitivity import (  # noqa
     SensitivityFactor,
     SensitivityUnion,
     SensitivityList,
     SensitivityMatrix,
     SensitivityFit,
+    SENSITIVITYLIST_FILTER_TYPE,
 )
 from .config import Config
+from .chip import Chip
+
+if TYPE_CHECKING:
+    from matplotlib import pyplot
 
 
 CONFIG = Config()
@@ -31,39 +40,47 @@ CONFIG = Config()
 class CalPoint(SensitivityFactor):
     """Represents one result of a calibration experiment
 
-    Attributes inherited from SensitivityFactor
-        mol (str): name of molecule
-        cal_type (str): type of calibration, i.e. "internal", "semi", "external", etc
-        F (dict): {mass: F_i_M} where mass is a str and F_i_M is the sensitivity factor
-            in C/mol for mol at mass
+    Attributes inherited from SensitivityFactor:
+
+    Attributes:
+        mol (str): The name of molecule
+        cal_type (str): The type of calibration, i.e. "internal", "semi", "external", etc
+        F (dict): ``{mass: F_i_M}`` where ``mass`` is a str and ``F_i_M`` is the sensitivity
+            factor in C/mol for mol at mass
+
     Calibration-specific attributes:
-        precision (float): the relative rms error during the calibration measurement
+
+    Attributes:
+        precision (float): The relative rms error during the calibration measurement
         background_signal (float): The average background signal at mass during the
             calibration experiment
         background_std (float): The standard deviation of the background signal at mass
             during the calibration experiment. This is used to calculate the
-            detection limit (see calc_detection_limit and Calibration.prints_report)
-        description(string): description of the calibration experiment
-        date(string): date of the calibration experiment
-        setup(string): setup on which the calibration experiment was done
-        internal_conditions (dict): conditions in the vacuum chamber and mass
+            detection limit (see `calc_detection_limit` and `Calibration.prints_report`)
+        description(string): Description of the calibration experiment
+        date(string): Date of the calibration experiment
+        setup(string): Setup on which the calibration experiment was done
+        internal_conditions (dict): Conditions in the vacuum chamber and mass
             spectrometer during calibration, e.g. E_ion, V_CEM, J_fill, roughing pump...
-        external_conditions (dict): conditions in and above the chip during calibration,
+        external_conditions (dict): Conditions in and above the chip during calibration,
             e.g. T, p, carrier gas, solvent, etc
     """
 
-    precision = attr.ib(default=None)
-    background_signal = attr.ib(default=None)
-    background_std = attr.ib(default=None)
-    description = attr.ib(default=None)
-    date = attr.ib(default=TODAY)
-    setup = attr.ib(default=None)
-    internal_conditions = attr.ib(default=None)
-    external_conditions = attr.ib(default=None)
+    precision: Optional[float] = attr.ib(default=None)
+    background_signal: Optional[float] = attr.ib(default=None)
+    background_std: Optional[float] = attr.ib(default=None)
+    description: Optional[str] = attr.ib(default=None)
+    date: str = attr.ib(default=TODAY)
+    setup: Optional[str] = attr.ib(default=None)
+    internal_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
+    external_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
 
-    def as_dict(self):
+    def as_dict(self) -> Dict[str, Union[float, str, Dict[str, JSONVALUE]]]:
         """Return the dictionary representation of the CalPoint"""
-        self_as_dict = super().as_dict()
+        self_as_dict = cast(
+            Dict[str, Union[float, str, Dict[str, JSONVALUE]]],
+            super().as_dict(),
+        )
         self_as_dict.update(
             precision=self.precision,
             background_signal=self.background_signal,
@@ -76,15 +93,15 @@ class CalPoint(SensitivityFactor):
         )
         return self_as_dict
 
-    def copy(self):
+    def copy(self) -> "CalPoint":
         """Return a new CalPoint cloning self"""
         self_as_dict = self.as_dict()
         for key, value in self_as_dict.items():
             if isinstance(value, dict):
                 self_as_dict[key] = value.copy()
-        return CalPoint(**self_as_dict)
+        return CalPoint(**self_as_dict)  # type: ignore
 
-    def calc_detection_limit(self, quantity="c", chip=None):
+    def calc_detection_limit(self, quantity: str = "c", chip: Chip = None) -> float:
         """Return the D.L. in [mol/s] (quantity='n_dot'), [Pa] ('p'), or [mM] ('c')
 
         If quantity is 'p' or 'c', then it needs a chip with the right T, p, and carrier
@@ -125,55 +142,56 @@ class Calibration(SensitivityList):
     def __init__(
         self,
         # calibration basics:
-        cal_list=None,  # takes the place of SensitivityList.sf_list
-        name=None,
+        cal_list: Optional[List[CalPoint]] = None,
+        name: Optional[str] = None,
         *,
-        setup=None,
-        date=None,
-        description=None,
-        default_setting=None,
-        calibration_directory=None,
-        real_names=None,
-        mol_props=None,  # will override stored molecule properties
-        fit_specs=None,
-        mdict=None,
-        **kwargs,  # extra stuff, such as external settings during calibration
+        setup: Optional[str] = None,
+        date: Optional[str] = None,
+        description: Optional[str] = None,
+        default_setting: Optional[str] = None,
+        mol_props: Optional[
+            Dict[str, Any]
+        ] = None,  # will override stored molecule properties
+        fit_specs: Optional[Dict[str, float]] = None,
+        mdict: Optional[MoleculeDict] = None,
+        **kwargs: Any,  # extra stuff, such as external settings during calibration
     ):
         """Create a Calibration object given its properties
 
-        Should only be called directly for a brand new calibration, with a cal_list as
+        Should only be called directly for a brand-new calibration, with a cal_list as
         the main data-containing input.
-        To load an existing calibration, use Calibration.load().
+
+        To load an existing calibration, use `Calibration.load`.
 
         Args:
             cal_list (list of CalPoint): The list of calibrations points (takes the
-                place of SensitivityList.sf_list), each having as a minimum a mol, mass
+                place of ``SensitivityList.sf_list``), each having as a minimum a mol, mass
                 and sensitivity factor in [C/mol].
-            name (str): The name of the calibration. by default,
+            name (str): The name of the calibration. By default,
                 name = f"{date}_{setup}_{detector}_{description}_{TODAY}"
-            setup (str): the setup for which the calibration was made / is valid
-            date (str): the date of the calibration measurements
-            detector (str): the detector, i.e. "CEM" or "FC"
-            description (str): extra info on calibration conditions / intentions
-            default_setting (str): The setting to which Calibration.fit will correspond
+            setup (str): The setup for which the calibration was made / is valid
+            date (str): The date of the calibration measurements
+            description (str): Extra info on calibration conditions / intentions
+            default_setting (str): The setting to which `Calibration.fit` will correspond.
                 Defaults to the setting of the first cal_point
-            calibration_directory (Path): The directory of the stored calibrations, defaults to
-                :attr:`Config.calibration_directory`
-            mol_props (dict): Optional. properties (e.g. Hcp, spectrum) to override
-                props in the molecule data files. form is mol:{prop:val}
-            real_names (dict): mapping of pseudonyms for molecules. Not used.
-            mass_list (list of str): list of masses for the SensitivityMatrix
-            mol_list (list of str): list of molecule names for the SensitivityMatrix
+            mol_props (dict): Optional. Properties (e.g. Hcp, spectrum) to override
+                props in the molecule data files. form is ``mol: {prop:val}``
+            fit_specs (dict): Mapping of settings to fit spect i.e:
+                ``setting: {"alpha": ..., "beta": ...}`` or merely:
+                ``{"alpha": ..., "beta": ...}`` in which it will be assigned to the default
+                setting
             mdict (MoleculeDict): In dev-time, or if in doubt, don't use this.
                 Calibration will initiate the mdict. But in quant time, Quantifier
                 initiates the mdict and Calibration updates it.
-            kwargs: additional key-word arguments are stored as self.extra_stuff
+            kwargs: Additional key-word arguments are stored as self.extra_stuff
                 this includes, for example, dev-time external conditions.
         """
         # ------ calibration results ------- #
         if cal_list is None:
             cal_list = []
-        super().__init__(cal_list)  # cal_list becomes self.sensitivity_list
+
+        # cal_list becomes self.sensitivity_list
+        super().__init__(cal_list)  # type: ignore
 
         # ----- calibration basics -------
         if name is None:
@@ -187,53 +205,49 @@ class Calibration(SensitivityList):
         else:
             print("Warning!!! Calibration empty.")
             self.default_setting = None
-        self.calibration_directory = (
-            calibration_directory or CONFIG.calibration_directory
-        )
 
         # ------- the molecules -------- #
         if mol_props is None:
             mol_props = {}
         self.mol_props = mol_props
-        if real_names is None:
-            real_names = {}
-        self.real_names = real_names
         self.mdict = self.initiate_mdict(mdict=mdict)  # THE collection of molecules
 
         # ----- fit, i.e. F vs f stuff -------------- #
-        self._fits = {}
+        self._fits: Dict[str, SensitivityFit] = {}
         if fit_specs and set(fit_specs.keys()) == {"alpha", "beta"}:
-            fit_specs = {self.default_setting: fit_specs}
-        self.fit_specs = fit_specs
+            self.fit_specs = {self.default_setting: fit_specs}
+        else:
+            self.fit_specs = cast(Dict[str, Dict[str, float]], fit_specs)
 
         # -------- extra stuff -------- #
         self.extra_stuff = kwargs
 
-    def as_dict(self):
+    def as_dict(self) -> Dict[str, Any]:
         """Return a dictionary including everything needed to recreate self"""
         cal_dicts = [cal.as_dict() for cal in self.cal_list]
         # calibration basics:
-        self_as_dict = dict(
-            name=self.name,
-            setup=self.setup,
-            date=self.date,
-            description=self.description,
+        self_as_dict = cast(
+            Dict[str, Any],
+            dict(
+                name=self.name,
+                setup=self.setup,
+                date=self.date,
+                description=self.description,
+            ),
         )
         # initial calibration results:
-        self_as_dict.update(
-            mol_props=self.mol_props, real_names=self.real_names, cal_dicts=cal_dicts
-        )
+        self_as_dict.update(mol_props=self.mol_props, cal_dicts=cal_dicts)
         self_as_dict.update(fit_specs=self.fit_specs)
         self_as_dict.update(self.extra_stuff)
         return self_as_dict
 
-    def save(self, file_name=None, cal_dir=None):
-        """save the self.as_dict() form of the calibration to a .json file
+    def save(self, file_name: str = None, cal_dir: PATHLIKE = None) -> None:
+        """Save the `as_dict` form of the calibration to a .json file
 
         Args:
-            file_name (str): name of file to save in, must end in .json
+            file_name (str): Name of file to save in, must end in .json
                 If not specified, will use self.name + ".json"
-            cal_dir: path to directory to save calibration in, defaults to
+            cal_dir: Path to directory to save calibration in, defaults to
                 :attr:`Config.calibration_directory`
         Raises:
             ValueError: if name not specified and "None" in self.name
@@ -252,16 +266,19 @@ class Calibration(SensitivityList):
             json.dump(self_as_dict, json_file, indent=4)
 
     @classmethod
-    def load(cls, file_name, cal_dir=None, **kwargs):
-        """loads a calibration object from a .json file
+    def load(
+        cls, file_name: PATHLIKE, cal_dir: PATHLIKE = None, **kwargs: Any
+    ) -> "Calibration":
+        """Loads a calibration object from a .json file
 
         Args:
-            file_name: name of the calibration file
-            cal_dir: path to directory to save calibration in, defaults to
+            file_name: Name of the calibration file
+            cal_dir: Path to directory to save calibration in, defaults to
                 :attr:`Config.calibration_directory`
-            kwargs: (other) key word arguments are fed to Calibration.__init__()
+            kwargs: (Other) key word arguments are fed to `Calibration.__init__`
+
         Returns:
-            Calibration: a calibration object ready to quantify your data!
+            Calibration: A calibration object ready to quantify your data!
         """
         cal_dir = cal_dir or CONFIG.calibration_directory
         path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
@@ -288,147 +305,141 @@ class Calibration(SensitivityList):
     # ----------- methods to do with adding, filtering, and fitting -----------
 
     @property
-    def cal_list(self):
-        """cal_list is a pseudonymn for sf_list (parent class jargon)"""
+    def cal_list(self) -> List[SensitivityFactor]:
+        """``cal_list`` is a pseudonymn for ``sf_list`` (parent class jargon)"""
         return self.sf_list
 
     @cal_list.setter
-    def cal_list(self, cal_list):
+    def cal_list(self, cal_list: List[SensitivityFactor]) -> None:
+        """``cal_list`` is a pseudonymn for ``sf_list`` (parent class jargon)"""
         self.sf_list = cal_list
 
     @property
-    def mol_list(self):
-        """The mol list of a calibration is all molecules for which it has a CalPoint"""
+    def mol_list(self) -> MOLLIST:
+        """The mol list of a calibration is all molecules for which it has a `CalPoint`"""
         return list({cal.mol for cal in self})
 
     @property
-    def mass_list(self):
-        """The mass list of a calibration is all masses for which it has a CalPoint"""
+    def mass_list(self) -> MASSLIST:
+        """The mass list of a calibration is all masses for which it has a `CalPoint`"""
         return list({cal.mass for cal in self})
 
     # Note, __add__ and filter are in SensitivityList, but need to be modified to
     # include more than the cal_list. SensitivityList.append() and __iadd__ are okay
     # as is.
 
-    def __add__(self, other):
-        """Adding another calibration just appends to the cal_list"""
+    def __add__(self, other: "Calibration") -> "Calibration":  # type: ignore
+        """Adding another calibration just appends to the `cal_list`"""
         cal_list = self.cal_list + other.cal_list
         self_as_dict = self.as_dict()
         self_as_dict.pop("cal_dicts")
         self_as_dict["cal_list"] = cal_list
         return Calibration(**self_as_dict)
 
-    def filter(self, **kwargs):
-        """See SensitivityList.filter. Calibration's implementation retains metadata"""
+    def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "Calibration":
+        """See `SensitivityList.filter`. Calibration's implementation retains metadata"""
         cal_list = SensitivityList.filter(self, **kwargs).sf_list
         self_as_dict = self.as_dict()
         self_as_dict.pop("cal_dicts")
         self_as_dict["cal_list"] = cal_list
         return Calibration(**self_as_dict)
 
-    def get(self, mol, mass):
-        """Return the CalPoint (1) or SensitivityUnion (>1) with cals of mol at mass"""
+    def get(self, mol: str, mass: str) -> Optional[Union[CalPoint, SensitivityUnion]]:
+        """Return the `CalPoint` (1) or `SensitivityUnion` (>1) with cals of mol at mass"""
         cal_list = self.filter(mol=mol, mass=mass).cal_list
         if len(cal_list) == 1:
-            return cal_list[0]
+            return cast(CalPoint, cal_list[0])
         if len(cal_list) > 1:
-            cal = None
-            for cal_point in cal_list:
-                cal = cal_point if cal is None else cal.union(cal_point)
-            return cal
+            sensitivity_union = cal_list[0].union(cal_list[1])
+            for cal_point in cal_list[2:]:
+                sensitivity_union = sensitivity_union.union(cal_point)
+            return sensitivity_union
+        return None
 
     @property
-    def setting_list(self):
+    def setting_list(self) -> List[str]:
+        """Return the ``settings`` for each `CalPoint` in this object"""
         return list({cal.setting for cal in self})
 
-    def make_fit(self, setting):
-        """Make a SensitivityFit for the CalPoints with a particular mass setting"""
+    def make_fit(self, setting: str) -> SensitivityFit:
+        """Make a `SensitivityFit` for the CalPoints with a particular mass setting"""
         fit_spec = self.fit_specs.get(setting, {}) if self.fit_specs else {}
-        fit = SensitivityFit(self, setting=setting, **fit_spec)
+        fit = SensitivityFit(self, setting=setting, **fit_spec)  # type: ignore
         self._fits[setting] = fit
         return fit
 
-    def make_fits(self):
-        """Make a SensitivityFit for the CalPoints for each mass setting"""
+    def make_fits(self) -> None:
+        """Make a `SensitivityFit` for the CalPoints for each mass setting"""
         for setting in self.setting_list:
             self.make_fit(setting)
 
-    def get_fit(self, setting):
-        """Return the cache'd or newly made fit at setting"""
+    def get_fit(self, setting: str) -> SensitivityFit:
+        """Return the cached or newly made fit at `setting`"""
         if setting in self._fits:
             return self._fits[setting]
         return self.make_fit(setting)
 
     @property
-    def default_fit(self):
+    def default_fit(self) -> SensitivityFit:
         """The fit at the default setting of the calibration"""
         return self.get_fit(self.default_setting)
 
     @property
-    def fit(calibration):
-        """Return an object who's functions choose which fit to use based on setting"""
+    def fit(
+        calibration,
+    ) -> Union["_MyMultiSettingFit", SensitivityFit]:
+        """Return an object whose functions choose which fit to use based on setting"""
         setting_list = calibration.setting_list
         if len(setting_list) == 1:
             return calibration.get_fit(setting_list[0])
 
-        class MyMultiSettingFit:
-            def predict_sf(self, mol, mass):
-                setting = mass_to_setting(mass)
-                # print(f"Using {self}! Predicting {mol} at {mass}, setting={setting}")
-                return calibration.get_fit(setting).predict_sf(mol, mass)
-
-            def predict_F(self, mol, mass):
-                setting = mass_to_setting(mass)
-                return calibration.get_fit(setting).predict_F(mol, mass)
-
-            def __getattr__(self, item):
-                return getattr(calibration.default_fit, item)
-
-        return MyMultiSettingFit()
+        return _MyMultiSettingFit(calibration)
 
     # ---- methods whose primary purpose is interface with quant.Molecule ---- #
 
-    def __getitem__(self, key):
-        """Indexing a Calibration looks up a molecule in calibration.mdict"""
+    def __getitem__(self, key: MOL) -> Molecule:  # type: ignore
+        """Indexing a `Calibration` looks up a molecule in ``calibration.mdict``"""
         try:
-            return self.mdict[key]
+            return cast(Molecule, self.mdict[key])
         except KeyError:
             raise KeyError(
                 f"self.mdict has no key '{key}'. Try self.molecule('{key}')."
             )
 
-    def molecule(self, mol):
-        """Return a quant.Molecule instance, calibrated if possible
+    def molecule(self, mol: MOL) -> Molecule:
+        """Return a `Molecule` instance, calibrated if possible
 
         dev-time only
 
         Returns:
-            Molecule: An quant.Molecule instance of mol loaded with the available
+            Molecule: An `Molecule` instance of mol loaded with the available
                 and/or requested calibration and quantification values
         """
         if mol in self.mdict:
-            return self.mdict[mol]
+            return cast(Molecule, self.mdict[mol])
         else:
             return self.mdict.get(mol)
 
-    def initiate_mdict(self, mdict=None):
-        """Populate self.mdict based on self.cal_list
+    def initiate_mdict(self, mdict: Optional[MoleculeDict] = None) -> MoleculeDict:
+        """Populate ``self.mdict`` based on ``self.cal_list``
 
-        This function is how Calibration.__init__ loads its molecules and adds
+        This function is how `Calibration.__init__` loads its molecules and adds
         saved information into them. It can also be used to add more molecules or
         more information into the calibration and its molecules afterwards.
 
-        It uses the singleton class MoleculeDict initialize the molecule collection.
+        It uses the singleton class `MoleculeDict` initialize the molecule collection.
         As calibration is typically the first gateway to new or saved sensitivity
         data, this is in dev-time the one and only place in quant that an instance of
-        MoleculeDict is created. In quant time, though, Quantifier will initiate a
-        medium-aware mdict and Calibration will update it here.
+        MoleculeDict is created. In quant time, though, `Quantifier` will initiate a
+        medium-aware mdict and `Calibration` will update it here.
 
         Effects:
-            sets self.mdict to the MoleculeDict
+
+         * Sets self.mdict to the MoleculeDict
 
         Returns:
-            dict: mdict, which has molecule names as keys and Molecule objects as values
+            dict: mdict, which has molecule names as keys and `Molecule` objects as values
+
         """
         if not mdict:
             mdict = MoleculeDict()
@@ -449,28 +460,29 @@ class Calibration(SensitivityList):
     # ------ methods having to do with the sensitivity matrix ------- #
 
     def make_sensitivity_matrix(
-        self, mol_list=None, mass_list=None, metadata=None, **kwargs
-    ):
+        self,
+        mol_list: Optional[MOLLIST] = None,
+        mass_list: Optional[MASSLIST] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> SensitivityMatrix:
         """Make the sensitivity matrix from the original calibration points.
 
         This function probably only gets called on initiation. It also gets called if
-        mol_list or mass_list are changed (shouldn't happen during quant time).
+        `mol_list` or `mass_list` are changed (shouldn't happen during quant time).
 
         Args:
-            mol_list (list of str): names of molecules to correspond to rows in sm.F_mat
-            mass_list (list of str): the masses to correspond to columns in sm.F_mat
-            metadata (dict): metadata for the sensitivity matrix. By default it will be
+            mol_list (list of str): Names of molecules to correspond to rows in sm.F_mat
+            mass_list (list of str): The masses to correspond to columns in sm.F_mat
+            metadata (dict): Metadata for the sensitivity matrix. By default, it will be
                 populated with keys "name", "sm_name", "time", and "number"
-            sl (SensitivityList): list of sensitivity factors with which to make
-                the sensitivity matrix. By default use self.cal_list
-
 
         Effects:
-            sets self.sm to the new sensitivity matrix
-            adds the new sensitivity matrix to self.sm_dict
+
+         * Sets self.sm to the new sensitivity matrix
+         * Adds the new sensitivity matrix to self.sm_dict
 
         Returns:
-            SensitivityMatrix: the new active sensitivity matrix
+            SensitivityMatrix: The new active sensitivity matrix
         """
         metadata_0 = dict(  # wow this is annoying. Can't wait for dict union with "|"
             time=time.time(),
@@ -482,23 +494,32 @@ class Calibration(SensitivityList):
         if len(setting_list) == 1:
             fit = self.get_fit(setting_list[0])
         else:
-            fit = self.fit  # this is a MultiSettingFit imposter
+            fit = cast(SensitivityFit, self.fit)  # this is a MultiSettingFit imposter
         sm = self.to_sensitivity_matrix(
             mol_list=mol_list, mass_list=mass_list, metadata=metadata, fit=fit
         )
         return sm
 
     @classmethod
-    def load_as_sm(cls, *, file_name, mol_list, mass_list, cal_dir=None, **kwargs):
+    def load_as_sm(
+        cls,
+        *,
+        file_name: PATHLIKE,
+        mol_list: MOLLIST,
+        mass_list: MASSLIST,
+        cal_dir: PATHLIKE = None,
+        **kwargs: Any,
+    ) -> SensitivityMatrix:
         """Load the calibration and immediately make a sensitivity matrix with it
 
         Args:
-            file_name (str or Path): name of the calibration file.
-            mol_list (list of str): names of molecules to correspond to rows in sm.F_mat
-            mass_list (list of str): the masses to correspond to columns in sm.F_mat
-            cal_dir: path to directory to save calibration in, defaults to
+            file_name (str or Path): Name of the calibration file.
+            mol_list (list of str): Names of molecules to correspond to rows in sm.F_mat
+            mass_list (list of str): The masses to correspond to columns in sm.F_mat
+            cal_dir: Path to directory to save calibration in, defaults to
                 :attr:`Config.calibration_directory`
-            kwargs: (other) key word arguments are fed to Calibration.__init__()
+            kwargs: (Other) key word arguments are fed to `Calibration.__init__`
+
         """
         cal_dir = cal_dir or CONFIG.calibration_directory
         calibration = cls.load(file_name=file_name, cal_dir=cal_dir, **kwargs)
@@ -506,22 +527,22 @@ class Calibration(SensitivityList):
 
     # ------ methods for visualizing and sanity-checking the calibration ------- #
 
-    def fit_F_vs_f(self, setting=None):
-        """Shortcut to the fit_F_vs_f of the calibration's SensitivityFit at setting"""
+    def fit_F_vs_f(self, setting: str = None) -> None:
+        """Shortcut to the fit_F_vs_f of the calibration's `SensitivityFit` at ``setting``"""
         fit = self.get_fit(setting=setting or self.default_setting)
         return fit.fit()
 
-    def plot_F_vs_f(self, setting=None, **kwargs):
-        """Shortcut to the plot_F_vs_f of the calibration's SensitivityFit at setting"""
+    def plot_F_vs_f(self, setting: str = None, **kwargs: Any) -> "pyplot.Axes":
+        """Shortcut to the plot_F_vs_f of the calibration's `SensitivityFit` at ``setting``"""
         fit = self.get_fit(setting=setting or self.default_setting)
         return fit.plot_F_vs_f(**kwargs)
 
-    def fit_all(self):
+    def fit_all(self) -> None:
         """Fit F vs f for each setting in the calibration"""
         for setting in self.setting_list:
             self.fit_F_vs_f(setting=setting)
 
-    def plot_all(self, **kwargs):
+    def plot_all(self, **kwargs: Any) -> Dict[str, "pyplot.Axes"]:
         """Plot F vs f for each setting in the calibration"""
         axes = {}
         for setting in self.setting_list:
@@ -530,17 +551,26 @@ class Calibration(SensitivityList):
             axes[setting] = ax
         return axes
 
-    def plot_as_spectrum(self, mol=None, ax="new", color=None, **kwargs):
+    def plot_as_spectrum(
+        self,
+        mol: Optional[MOL] = None,
+        ax: Union[str, "pyplot.Axes"] = "new",
+        color: Optional[str] = None,
+        **kwargs: Any,
+    ) -> "pyplot.Axes":
         """Plot each cal_point in self on an F vs m/z plot.
 
         This works well with filter. For example,
-        calibration.filter(mol="CH4").filter(setting="CEM").plot_as_spectrum()
+        ``calibration.filter(mol="CH4").filter(setting="CEM").plot_as_spectrum()``
         plots the measured absolute-sensitivity CEM-detector spectrum of CH4.
+
         """
         if ax == "new":
             fig, ax = make_axis()
             ax.set_xlabel("m/z in atomic units")
             ax.set_ylabel("sensitivity / [C/mol]")
+        ax = cast("pyplot.Axes", ax)
+
         if not mol:
             for mol_ in self.mol_list:
                 self.plot_as_spectrum(mol=mol_, ax=ax, color=color, **kwargs)
@@ -549,44 +579,48 @@ class Calibration(SensitivityList):
             for n, cal_point in enumerate(self.filter(mol=mol)):
                 M = mass_to_M(cal_point.mass)
                 F = cal_point.F
-                ax.plot([M, M], [F, 0], ":", color=color_i)
+                ax.plot([M, M], [F, 0], ":", color=color_i)  # type: ignore
                 if n == 0:  # only label one so that the axis looks good.
-                    ax.plot(M, F, "o", color=color_i, label=mol, **kwargs)
+                    ax.plot(M, F, "o", color=color_i, label=mol, **kwargs)  # type: ignore
                 else:
-                    ax.plot(M, F, "o", color=color_i, **kwargs)
+                    ax.plot(M, F, "o", color=color_i, **kwargs)  # type: ignore
             ax.legend(loc="upper right")
         return ax
 
-    def prints_report(self, chip=None, long=True):
+    def prints_report(self, chip: Optional[Chip] = None, long: bool = True) -> str:
         """Return a string which is a report of the calibration with accuracies, etc.
 
         The precision, accuracy, and detection limit are all determined from the
         single mass with the highest sensitivity factor. If the CalPoint is a
-        SensitivityUnion, then the accuracy is the relative standard deviation
+        `SensitivityUnion`, then the accuracy is the relative standard deviation
         of the contained sensitivity factors, and the precision and detection limit
-        come from the first contained CalPoint with a stored precision.
-        The precision must be stored in the CalPoint when it is derived from
+        come from the first contained `CalPoint` with a stored precision.
+        The precision must be stored in the `CalPoint` when it is derived from
         experimental data. It is the relative error when the calculated flux and fitted
         sensitivity factor to explain the measured signal.
+
         The detection limit is determined by the background noise, which must be
         determined during the calibration experiment and stored in the CalPoint. This
         noise is converted first into a flux by dividing by the signal and then into
         a concentration using the mass transfer coefficient determined by the p, T,
         and total flux of a chip.
+
         Precision, accuracy, and detection limit all implicitly assume there are no
         interferences that were not present during the calibration experiment.
 
         Args:
-            chip (Chip): The chip with p, T and total flux used to determine D.L.
+            chip (Chip): The chip with ``p``, ``T`` and total flux used to determine D.L.
             long (bool): Whether to include all the individual CalPoints (True)
 
-        Returns: (str) a report as a single string containing linebreaks with general
+        Returns:
+            str: A report as a single string containing linebreaks with general
             calibration metadata at the top and then a section for each molecule in the
             calibration with the averaged sensitivities, the accuracy, precision, and
             detection limit if available. This is followed by the representation of
             each of the CalPoints available for the molecule.
+
         """
-        sf_dict = self.to_sf_dict()
+        sf_dict = cast(Dict[MOL, CalPoint], self.to_sf_dict())
         report_lines = []
         report_lines += [
             f"calibration name = {self.name}\n",
@@ -597,13 +631,13 @@ class Calibration(SensitivityList):
             "\n",
         ]
         for mol, sf_dict_i in sf_dict.items():
-            spectrum = {mass: sf.F for mass, sf in sf_dict_i.items()}
+            spectrum = {mass: sf.F for mass, sf in sf_dict_i.items()}  # type: ignore
             mass_max = max([(F, mass) for mass, F in spectrum.items()])[1]
-            sf_max = sf_dict_i[mass_max]
+            sf_max = sf_dict_i[mass_max]  # type: ignore
             if isinstance(sf_max, SensitivityUnion):
                 accuracy = sf_max.accuracy * 100
                 try:
-                    sf_max = [sf for sf in sf_max.sf_list if sf.precision][0]
+                    sf_max = [sf for sf in sf_max.sf_list if sf.precision][0]  # type: ignore
                 except IndexError:
                     sf_max = sf_max.sf_list[0]
             else:
@@ -629,7 +663,7 @@ class Calibration(SensitivityList):
             ]
             if long:
                 report_lines += ["\tAll measurements:\n"]
-                for mass, sf in sf_dict_i.items():
+                for mass, sf in sf_dict_i.items():  # type: ignore
                     if isinstance(sf, SensitivityUnion):
                         for sf_n in sf.sf_list:
                             report_lines += [f"\t\t{sf_n}\n"]
@@ -639,6 +673,23 @@ class Calibration(SensitivityList):
 
         return "".join(report_lines)
 
-    def print_report(self, *args, **kwargs):
-        """Print the report generated by prints_report to the terminal"""
+    def print_report(self, *args: Any, **kwargs: Any) -> None:
+        """Print the report generated by `prints_report` to the terminal"""
         print(self.prints_report(*args, **kwargs))
+
+
+class _MyMultiSettingFit:
+    def __init__(self, calibration: Calibration) -> None:
+        self.calibration = calibration
+
+    def predict_sf(self, mol: MOL, mass: MASS) -> SensitivityFactor:
+        setting = mass_to_setting(mass)
+        # print(f"Using {self}! Predicting {mol} at {mass}, setting={setting}")
+        return self.calibration.get_fit(setting).predict_sf(mol, mass)
+
+    def predict_F(self, mol: MOL, mass: MASS) -> float:
+        setting = mass_to_setting(mass)
+        return self.calibration.get_fit(setting).predict_F(mol, mass)
+
+    def __getattr__(self, item: str) -> Any:
+        return getattr(self.calibration.default_fit, item)

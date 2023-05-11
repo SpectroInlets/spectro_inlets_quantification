@@ -19,7 +19,7 @@ from spectro_inlets_quantification.peak import Peak
 from spectro_inlets_quantification.signal import SignalDict, SignalProcessor
 
 CONFIG = Config()
-SIGNAL_MOD = "spitze.quant.physics.signal"
+SIGNAL_MOD="spectro_inlets_quantification.signal"
 FLOAT_RANGE_10 = np.arange(10, dtype=float)
 
 

@@ -6,8 +6,8 @@ from json import load
 
 from pytest import approx, mark
 
-from spitze.quant.physics.config import Config
-from spitze.quant.physics.molecule import Molecule
+from spectro_inlets_quantification.config import Config
+from spectro_inlets_quantification.molecule import Molecule
 
 CFG = Config()
 MOL_NAMES = [

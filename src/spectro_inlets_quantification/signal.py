@@ -20,7 +20,7 @@ The SignalProcessor, with help from the other classes of this and the peak modul
     - Fitting the resulting peaks
   * Maybe adjusts backgrounds on the fly to match the peak-free areas of the measured full spectra?
 
-The `SignalDict` and `PeakSeries` classes of this module are the (advanced) MID and spectrum
+The `SignalDict` and ``PeakSeries`` classes of this module are the (advanced) MID and spectrum
 data classes of quant. They have useful data visualization methods.
 
 PeakSeries is the main analysis tool of recorded datasets (a parser should load raw data
@@ -51,6 +51,7 @@ import numpy as np
 from numpy.typing import NDArray
 import time
 from .constants import STANDARD_COLORS
+from .custom_types import MASS_TO_SIGNAL
 from .tools import mass_to_M, mass_to_pure_mass, make_axis
 from .exceptions import PeakFitError
 from .medium import Medium
@@ -63,7 +64,6 @@ if TYPE_CHECKING:
 
 CONFIG = Config()
 
-MASS_TO_SIGNAL: TypeAlias = Dict[str, float]
 FLOAT_ARRAY: TypeAlias = NDArray[np.float64]
 MASS_LIST: TypeAlias = Iterable[str]
 MASS_TO_ARRAY: TypeAlias = Dict[str, FLOAT_ARRAY]

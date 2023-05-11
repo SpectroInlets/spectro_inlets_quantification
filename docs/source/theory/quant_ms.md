@@ -3,7 +3,8 @@ $$
 \renewcommand{\vec}[1]{\underline{\mathbf{#1}}}
 $$
 
-# Quantitative Mass Spectrometry with `spectro_inlets_quantification` 
+(sec:quant)=
+# Application Note: Quantitative Mass Spectrometry *Documentation for **quant.physics*** 
 
 **Author: Spectro Inlets**
 
@@ -32,7 +33,7 @@ Spectro Inlets approaches this problem informed by two unique advantages:
 
 Though these two advantages only give direct new insight into vacuum inlet, one of seven transfer functions between a dissolved analyte and a mass spec signal, it proves to be the missing piece that can bring quantitative mass spectrometry to a practical reality. Sections [](sec:strategy) and [](sec:calibration) below describe how this approach gives both practical advantages and theoretical insight. In short, it involves treating the absolute flux of molecules through the vacuum inlet as a fundamental quantity which is the key also to quantification of an analyte in a bulk liquid or gas. 
 
-Sections [](sec:modules) describe the code package, ```spectro_inlets_quantification```, developed in python to represent the physics and implement the quantification strategy described in Sections [](sec:steps) - [](sec:calibration). This Application Note serves as a general documentation of `spectro_inlets_quantification` v1.0 so code examples are provided in the text of sections  [](sec:modules). An accompanying Ipython notebook to this document contains code examples which make all of the included figures (unless otherwise noted) and demonstrate the modules of `spectro_inlets_quantification`. On the other hand, this Application Note falls short of prescribing experimental procedures, which is application-specific and should be developed by the user and/or documented elsewhere. 
+Sections [](sec:modules) and [](sec:usage) describe the code package, `quant.physics`, developed in python to represent the physics and implement the quantification strategy described in Sections [](sec:steps) - [](sec:calibration). This Application Note serves as a general documentation of `quant.physics` v1.0 so code examples are provided in the text of sections  [](sec:modules) and [](sec:usage). An accompanying Ipython notebook to this document contains code examples which make all of the included figures (unless otherwise noted) and demonstrate the modules of `quant.physics`. On the other hand, this Application Note falls short of prescribing experimental procedures, which is application-specific and should be developed by the user and/or documented elsewhere. 
 
 (sec:steps)=
 ## Step-by-step physics of MS
@@ -153,14 +154,14 @@ The flow of molecules through the capillary goes through at least three regimes 
 $$
 \dot{n}^0(\vec{p}, T) = \frac{1}{R T}\frac{1}{l_\text{cap}} 
 \left(\left( 
-\frac{\pi}{8\nu}a^4\bar{p} + \frac{2\pi}{3}a^3\bar{v} \frac {1+2\frac{2\sqrt{2}}{\sqrt{\pi}}\frac{a}{\eta}\frac{\bar{p}}{\bar{v}}} {1+2.48\frac{2\sqrt{2}}{\sqrt{\pi}}\frac{a}{\eta}\frac{\bar{p}}{\bar{v}}}
+\frac{\pi}{8\eta}a^4\bar{p} + \frac{2\pi}{3}a^3\bar{v} \frac {1+2\frac{2\sqrt{2}}{\sqrt{\pi}}\frac{a}{\eta}\frac{\bar{p}}{\bar{v}}} {1+2.48\frac{2\sqrt{2}}{\sqrt{\pi}}\frac{a}{\eta}\frac{\bar{p}}{\bar{v}}}
 \right)
 \left(p^0-p_{\mathrm{tran}}\right) 
 + 
 \frac{2\pi}{3}a^3\bar{v}\left(p_{\mathrm{tran}}-p_2\right)\right)
 $$(eq:capillary)
 
-Here, $p^0$ is the inlet pressure, $p_2$ is the outlet pressure ($\approx$ 0), $p_{\mathrm{tran}}=\frac{k_B T}{2 \sqrt{2}\pi s^2 a}$ is the pressure at which the transition from viscous to molecular flow occurs, $\bar{p}=\frac{p^0 + \bar{p}_{\mathrm{tran}}}{2}$ is the average pressure in the viscous flow regime, $\eta$ is the viscosity of the gas, $s$ is the molecular diameter, $\bar{v}=\sqrt{\frac{8 k_B T}{\pi m}}$ is the mean thermal velocity of the gas molecules, and $m$ is the molecular mass. Furthermore, $l_\text{cap}$ is the length of the capillary, and $a=h_\text{cap}=w_\text{cap}$ is its height and width, assumed to be equal (square cross-section). By design, $l_\text{cap} = 1\,\text{mm}$, $w_\text{cap} = 6\,\mu\text{m}$, and $h_\text{cap} = 6\,\mu\text{m}$. This equation is plotted for a few common gases in {numref}`Figure %s <fig:cap>`.
+Here, $p^0$ is the inlet pressure, $p_2$ is the outlet pressure ($\approx$ 0), $p_{\mathrm{tran}}=\frac{k_B T}{2 \sqrt{2}\pi s^2 a}$ is the pressure at which the transition from viscous to molecular flow occurs, $\bar{p}=\frac{p^0 + \bar{p}_{\mathrm{tran}}}{2}$ is the average pressure in the viscous flow regime, $\eta$ is the viscosity of the gas, $s$ is the molecular diameter, $\bar{v}=\sqrt{\frac{8 k_B T}{\pi m}}$ is the mean thermal velocity of the gas molecules, and $m$ is the molecular mass. Furthermore, $l_\text{cap}$ is the length of the capillary, and $a$ is the equivalent radius of the capillary given as $a=\sqrt{\frac{h_\text{cap}w_\text{cap}}{\pi}}$ with $h_\text{cap}=w_\text{cap}$ being its height and width, assumed to be equal (square cross-section). By design, $l_\text{cap} = 1\,\text{mm}$, $w_\text{cap} = 6\,\mu\text{m}$, and $h_\text{cap} = 6\,\mu\text{m}$. This equation is plotted for a few common gases in {numref}`Figure %s <fig:cap>`.
 
 The capillary equation thus depends on the viscosity $\eta$, molecular diameter $s$, and molecular mass $m$ of the gas in the sampling volume. These can be looked up for a pure gas. 
 
@@ -496,7 +497,7 @@ The **sensitivity factor** $F^i_M$ is the change in the signal in [A] at mass $M
 
 The most important implication of this definition is that a sensitivity factor is an *absolute* quantity, and distinct from the relative sensitivity factors more commonly reported. This is the basis of *absolute quantification* in mass spectrometry which makes the new approach unique (see [Scott2019](https://orbit.dtu.dk/en/publications/isotope-labeling-studies-in-electrocatalysis-for-renewable-energy), ch 2), made possible by Spectro Inlets' core technology and turnkey application, as described in the introduction. 
 
-Each molecule has a sensitivity factor at each mass, though most are zero. Masses with m/z ratios at which the molecule forms fragments correspond to its non-zero sensitivity factors. Thus, **any** list of molecules (known in `spectro_inlets_quantification` as `mol_list`) and list of masses and settings (`mass_list`) together define a **sensitivity matrix** with a sensitivity factor for each molecule at each mass. This is one of the most important themes in `quant`.
+Each molecule has a sensitivity factor at each mass, though most are zero. Masses with m/z ratios at which the molecule forms fragments correspond to its non-zero sensitivity factors. Thus, **any** list of molecules (known in `quant.physics` as `mol_list`) and list of masses and settings (`mass_list`) together define a **sensitivity matrix** with a sensitivity factor for each molecule at each mass. This is one of the most important themes in `quant`.
 
 As will be described below, sensitivity factors are an especially useful concept because they can work as the quantity to determine by calibration for all three types of quantification: Absolute flux quantification (when you have $\vec{S}$ and need $\vec{\dot{n}}$ as in EC-MS), pressure quantification (when you have $\vec{S}$ and need $\vec{p}$), and concentration quantification (when you have $\vec{S}$ and need $\vec{c}$). An important implication of unifying these types of quantification is that *all uncertainty is put in F*. 
 
@@ -556,7 +557,7 @@ To quantify a molecule based on mass spectrometer measurements, we have to start
 
   Here, $\mat{F}^+$ is the [Moore-Penrose inverse](https://en.wikipedia.org/wiki/Moore\%E2\%80\%93Penrose_inverse) of $\mat{F}$, which minimizes the least-square error produced by the over-fitting that comes from using more masses than molecules.
 	
-  More complex solutions involving splitting up the problem and using multiple sensitivity matrices might also make sense and are supported in `spectro_inlets_quantification`. Choosing the `mol_list` and `mass_list` for the sensitivity matrix or matrices is, in general, an application-specific problem requiring knowledge of the medium and the quantification needs. It must be worked out by the user or addressed in more detail elsewhere.
+  More complex solutions involving splitting up the problem and using multiple sensitivity matrices might also make sense and are supported in `quant.physics`. Choosing the `mol_list` and `mass_list` for the sensitivity matrix or matrices is, in general, an application-specific problem requiring knowledge of the medium and the quantification needs. It must be worked out by the user or addressed in more detail elsewhere.
 
 * $\vec{\dot{n}} \rightarrow \vec{p}$. **Find the self-consistent solution for the total capillary flux and the partial pressure of each gas in the chip.** Equation {eq}`eq:step2` gives the transfer function relating fluxes ($\vec{\dot{n}}$) to partial pressures ($\vec{p}$). 
 	
@@ -592,14 +593,14 @@ To quantify a molecule based on mass spectrometer measurements, we have to start
 	c^i = \frac{p^i}{K_\text{H}^i(T)}
 	$$
 
-The `spectro_inlets_quantification` package provides tools for each of these steps. The {class}`.SignalProcessor` class in the `signal` module handles the $(\vec{x}, \vec{y})\rightarrow \vec{S}$ step, calling on classes of the `peak` module. The {class}`.Quantifier` class in the `quantifier` module handles the remaining steps, calling on all the remaining interlinked modules, especially the `sensitivity` module for the $\vec{S} \rightarrow \vec{\dot{n}}$ step, the `chip` module for the $\vec{\dot{n}} \rightarrow \vec{p}$ step, and the `molecule` module for the $\vec{p}\rightarrow\vec{c}$ step. Each of these modules is described below in  [](sec:modules), but first we conclude the theory part of this document with comments on how to measure the sensitivity factors needed for the central $\vec{S} \rightarrow \vec{\dot{n}}$ step.
+The `quant.physics` package provides tools for each of these steps. The `SignalProcessor` class in the `signal` module handles the $(\vec{x}, \vec{y})\rightarrow \vec{S}$ step, calling on classes of the `peak` module. The `Quantifier` class in the `quantifier` module handles the remaining steps, calling on all the remaining interlinked modules, especially the `sensitivity` module for the $\vec{S} \rightarrow \vec{\dot{n}}$ step, the `chip` module for the $\vec{\dot{n}} \rightarrow \vec{p}$ step, and the `molecule` module for the $\vec{p}\rightarrow\vec{c}$ step. Each of these modules is described below in  [](sec:modules), but first we conclude the theory part of this document with comments on how to measure the sensitivity factors needed for the central $\vec{S} \rightarrow \vec{\dot{n}}$ step.
 
 
 
 (sec:calibration)=
 ## Determining sensitivity factors
 
-Sensitivity factors play a central role in `spectro_inlets_quantification`. They represent five of the seven transfer functions described in Section [](sec:steps), including the steps about which least is known a priori. For this reason, as a design decision, sensitivity factors are treated as the one unknown parameter of `spectro_inlets_quantification` which must be determined by calibration. How to do so is described in the first part of this section. 
+Sensitivity factors play a central role in `quant.physics`. They represent five of the seven transfer functions described in Section [](sec:steps), including the steps about which least is known a priori. For this reason, as a design decision, sensitivity factors are treated as the one unknown parameter of `quant.physics` which must be determined by calibration. How to do so is described in the first part of this section. 
 
 ### Calibration experiments
 
@@ -742,5 +743,137 @@ $k$ is defined by Equation {eq}`eq:k`, so Equation {eq}`eq:prediction` has two f
 
 {numref}`Figure %s <fig:Fvf>` shows an example of this fit. This type of plot is referred to as an "F-vs-f" plot.
 
+(sec:modules)=
+## The modules of `quant.physics`
+
+The `quant.physics` package tries to make the best of modular, object-oriented programming to capture all the physics involved in quantitative mass spectrometry with a Spectro Inlets inlet system. Modules and classes do their best to represent physically intuitive concepts in the system and in your workflow. This section gives a very brief description of each module as it exists in quant.physics v1.0, with examples of some of the most important interfaces in the accompanying Ipython notebook. 
+
+Most of the equations in the previous sections of this document appear somewhere in the package. It is much bigger than that, though, because of the need to keep various pieces of information in the right places accessible through intuitive interfaces.
+
+The code is pretty well self-documented, so don't hesitate to import anything and input it to python's `help` function to see the docstring. There are code examples to go along with these explanations for each module in the accompanying Ipython notebook. The modules have an explicit hierarchy, and this section goes through them from lowest to highest in that hierarchy.
+
+
+(sec:constants)=
+### constants.py
+
+The **constants** module defines constants used throughout `quant.physics`, such as:
+
+* The `Path` objects directing to files used by `quant.physics`, such as the `MOLECULE_DIRECTORY` containing molecule constants like Henry's-Law parameters and ionization cross-section.	
+* The physical constants used in `quant.physics` such as the `GAS_CONSTANT` representing $R=8.3143$ [J/mol/K].
+* The chip design parameters including `STANDARD_CAPILLARY_WIDTH = 6e-6` [m]
+* Standard conditions including `STANDARD_TEMPERATURE = 298.15` [K]
+* Plotting preferences such as `STANDARD_COLORS`
+
+(sec:tools)=
+### tools.py
+
+The **tools** module contains useful pythony stuff used in multiple places like a `singleton_decorator`.
+
+It also includes some little function for parsing mass strings. For example:
+
+```python
+>>> from physics.tools import mass_to_M, mass_to_setting
+>>> mass_to_M("M32-CEM")
+32.0
+>>> mass_to_setting("M32-CEM")
+'CEM'
+```
+
+It also includes a string made when `quant.physics` is imported that represent the day's date in Soren's format. For example, the 13th of November 2020 is "20K13" where 'K' (the 11th letter) represents November (the 11th month). This string is used by default when new calibrations are defined.
+
+(sec:medium)=
+### medium.py
+
+The **medium** module's only purpose is to give a home to the one-and-only pressure and temperature of the system, so that different classes agree on these two external conditions. That home, `Medium`, is a singleton. Accessing the attributes `T` or `p` of ***any*** other class in any of the modules of quant including `Quantifier`, `Molecule`, `Chip`, or `Gas` will return `Medium().T` or `Medium().p`, respectively.
+
+(sec:molecule)=
+### molecule.py
+
+The **molecule** module defines the `Molecule` class. Instances of this class, initated with the `Molecule.load()` (alternative constructor) class method which takes the molecule name (e.g. "H2"), load a number of constants including Henry's-Law constant, thermochemistry, molecular diameter, ionization cross-section data, and reference spectrum from a .json data file in the `MOLECULE_DIRECTORY`. 
+
+The `molecule` thus initiated wraps this data with some useful methods, such as one to calculate the volatility constant as a function of temperature (used to generate the data for {numref}`Figure %s <fig:KH>`) and plot the reference spectrum (such as {numref}`Figure %s <fig:NIST>`.
+
+The module also defines a `MoleculeDict`, a singleton whose only instance is called `mdict` everywhere it is used in `quant.physics`. The `mdict` collects `Molecule` instances when they are initiated with the `mdict.get()` method which takes the molecule name as its argument, and then makes them available by method or by indexing as well. `mdict.get()` is almost always preferred over `Molecule.load()` because it avoids an unnecessary second read of the molecule file.
+
+(sec:mixture)=
+### mixture.py
+
+The **mixture** module has a base class `Mixture` which serves as a framework for dealing with a mixture of molecules. The most important attribute of its instances (`mixture`) is `mixture.comp`, which is a dictionary of {$i$: $x^i$} where $i$ is the name of a molecule and $x^i$ is its mol fraction in the mixture. If `abc` is an attribute of `Molecule`, then `mixture.abc` returns the mol-weighted average of `abc` for each of the molecules in the mixture. `Mixture.make()` is a constructor that takes a `comp` dictionary or the name of a molecule or the name of a standard mixture (such as `"air"`), and populates the mixture accordingly.
+
+The `Gas` class inherits from `Mixture` and adds a couple of things: First, it has an updated viscosity correction that overrides the weighted average inherited from `Mixture` and instead uses the algorithm in Davidson1993. This was used to generate the data for {numref}`Figure %s <fig:eta>`. Second, `gas.saturated_with()` takes a molecule as input and returns a gas that contains that molecule at the mol fraction dictated its vapor pressure and the system pressure.
+
+(sec:chip)=
+### chip.py 
+
+The **chip** module defines the `Chip` class, which is basically a wrapper around the capillary equation, Equation {eq}`eq:capillary`. An instance of `Chip` can be defined with the `Chip.load` method which takes as its argument the name of a .json file in the `constants.CHIP_DIRECTORY`, which contains the capillary dimensions if they differ from the defaults of a known chip. It can also be initialized with the default dimensions directly from `chip=Chip()`. Either can take `p`, `T`, `carrier`, and `solvent` as arguments, where the first two set the system `Medium().p` and `Medium().T`, respectively. 
+
+`chip.gas` represents the gas in the chip. By default, it is `chip.carrier` saturated with `chip.solvent`. The capillary equation is called with `chip.calc_n_dot_0()`. It can take a `gas`, `p`, and `T` as inputs but by default uses those of the chips. This method was used to generate the data in {numref}`Figure %s <fig:cap>`. It also has a `chip.calc_n_dot()` function which returns a dictionary giving the flux in [mol/s] for each of the molecules in its gas.
+
+The `chip` also has a number of methods for calculating the partial pressure of the gases in it given a set of quantified fluxes, including that which solves Equation {eq}`eq:solver1`. This resets the chip's gas.
+
+(sec:peak)=
+### peak.py
+
+The **peak** module defines a `Peak` base class and classes that inherit from it (so far only `GaussPeak`). Each of these classes is initiated with x-and-y data, and have methods for extracting a `height`, `width`, and `center` from it. For the base class, these are extracted by simple means (for example, height is the maximum y value), while for a `gauss_peak` (instance of `GaussPeak`), they come from the Gaussian fit. A peak that fails to fit raises a `PeakFitError`. A peaks also has a `signal` attribute, which is the height unless it is flagged with `peak.error=True`, in which case `peak.signal` returns 0. 
+
+Each `Peak` class has a `plot` method for visualization. {numref}`Figure %s <fig:peak>` was made with `gauss_peak.plot()`.
+
+(sec:signal)=
+### signal.py
+
+The **signal** module contains three classes for organizing, visualizing, and analyzing raw data. 
+
+The `SignalDict` class stores signals, as defined in {prf:ref}`def-signal`. When a signal is added, either its time is also added or it gets timestamped, so that `SignalDict` knows its history. Besides that, it acts like a dictionary which returns the latest signal in [A] when indexed with a mass-setting string.
+
+The `SignalProcessor` class is the main data-processing class of `quant.physics`. It can be loaded from a processor file containing data on non-linearity and background, or initiated directly. Either way, it can be given a `peak_type` which specifies which `Peak` class the instance, `signal_processor`, uses. Its `calc_signal` method class takes in raw x-and-y data, corrects it for non-linearity and/or background, makes a `Peak`, and then calculates the signal, adds it to its `SignalDict`, and returns it. 
+
+The `PeakSeries` class provides a mean of storing, visualizing, and analyzing a series of spectra over one or more peaks. It is useful in, for example, calibration experimental data analysis. A new application should consider writing a parser for its data files that produces an instance of PeakSeries or a class that inherits from it.
+
+(sec:sensitivity)=
+### sensitivity.py
+
+The **sensitivity** module contains several classes for managing sensitivity factors. 
+
+First, the `SensitivityFactor` class is a wrapper around a single sensitivity factor. A `sensitivity_factor` has the actual number in [C/mol] as its attribute `F`, with its attributes `mol` and `mass` attributes specifying the molecule and mass-setting for which it applies. The `SensitivityUnion` class can unite sensitivity factors with matching mol and mass. Its `F` is the average of those of its members, and it has a property `accuracy` telling the relative deviation thereof. 
+
+The `SensitivityList` is a wrapper around a list of sensitivity factors which a `filter` method that returns a smaller `SensitivityList` based on any attribute of the `sensitivity_factors`. It also has a `to_sensitivity_matrix` method which takes `mol_list` and `mass_list` as arguments and passes them on, with the needed `sensitivity_factors` to `SensitivityMatrix`.
+
+The `SensitivityMatrix` class is the home of the central calculation in quantification, Equation {eq}`eq:Q1` for counting flux, which is `sensitivity_matrix.calc_n_dot()`. In this method, the inverse to `sensitivity_matrix.F_mat` ($\mat{F}$) is taken and matrix multiplied onto the `signals` or `signal_dict` given as an argument, and the result is rearranged as a dictionary `n_dot`. `sensitivity_matrix.F_mat` is is a matrix spanning `sensitivity_matrix.mol_list` and `sensitivity_matrix.mass_list` where any entry that was not available from the `sensitivity_list` that initiated it is predicted by the method described in Section [](sec:f). 
+
+That prediction is done by the class `SensitivityFit`. A `sensitivity_fit` has a `fit` method which determines the parameters `sensitivity_fit.alpha` and `sensitivity_fit.beta` ($\alpha$ and $\beta$ in Equation {eq}`eq:prediction`), and a `plot_F_vs_f` method for visualization ({numref}`Figure %s <fig:Fvf>`).
+
+(sec:cal)=
+### calibration.py
+
+The **calibration** module defines two classes, each of which inherit from classes in the `sensitivity` module. 
+
+`CalPoint` inherits from `SensitivityFactor` and adds to its parent metadata attributes and specs such as `precision` and `background_std` where the latter can be used to calculate its detection limit. A `CalPoint` should be initialized directly with all of these attributes, which are descriptions of and results from a calibration experiment.
+
+`Calibration` inherits from `SensitivityList` and adds to its parent methods for visualization, saving, loading, and fitting. `Calibration` is the class for collecting and saving calibration results for later use. During quantification, a `calibration` is loaded and used to generate `sensitivity_matrices` with an enhanced version of the inherited `make_sensitivity_matrix` function. `calibration.fit`, whose parameters are saved and loaded with the `CalPoints`, is passed on to the sensitivity matrices that `calibration` makes. The fit is mainly to be able to sanity-check the `calibration`, usually after `filter`'ing for a specific setting. The `calibration.plot_as_spectrum()` method makes figures like {numref}`Figure %s <fig:cal>`. It also has a `print_report` method, which generates a text output report.
+
+(sec:quantifier)=
+### quantifier.py
+
+Finally, the **quantifier** module defines the `Quantifier` class, which is initiated with a `calibration_file`, a `mol_list` and `mass_list`, and a `chip`, as well as a few other options. The `quantifier` loads the `calibration` from the file and immediately uses it to build a `sensitivity_matrix` based on the `mol_list` and `mass_list`. 
+
+Most importantly, `quantifier` binds the methods for quantification according to the procedure in Section [](sec:solve):
+
+* `quantifier.calc_n_dot` for flux quantification,
+* `quantifier.calc_pp` for partial pressure quantification, and
+* `quantifier.calc_c` for concentration quantification.
+
+That concludes our tour of `quant.physics`, most of which is in the Ipython notebook. We hope you enjoyed it and find the tools and physics here useful!
+
+(sec:usage)=
+## Using **quant.physics**
+
+To run the examples shown in this Application Note, make sure the folder quant is in your pythonpath. This can be done by explicitly adding it at the top of a script or during an ipython session with this code:
+
+```python
+from pathlib import Path
+import sys
+quant_path = Path.home() / "git/spitze/src/spitze/quant"   # update me!!!
+sys.path.append(str(quant_path))
+```
 
 [^allfigures]: All figures, unless otherwise specified, are made in the accompanying Ipython notebook.

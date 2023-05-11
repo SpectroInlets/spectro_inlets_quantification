@@ -4,14 +4,14 @@
 
 Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 
-    T: Temperature in [K]
-    p: pressure in [Pa]
-    l_cap, w_cap, h_cap: length, width, and height of capillary in [m]
-    n_dot: capillary flux in [mol/s]
-    N_dot: molecular capillary flux in [s^-1]
-    eta: dynamic viscosity in [Pa*s]
-    s: molecular diameter in [m]
-    m: molecular mass in [kg]
+* T: Temperature in [K]
+* p: Pressure in [Pa]
+* l_cap, w_cap, h_cap: Length, width, and height of capillary in [m]
+* n_dot: Capillary flux in [mol/s]
+* N_dot: Molecular capillary flux in [s^-1]
+* eta: Dynamic viscosity in [Pa*s]
+* s: Molecular diameter in [m]
+* m: Molecular mass in [kg]
 
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 """
@@ -19,8 +19,10 @@ The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_
 import json
 from math import isclose
 from pathlib import Path
+from typing import Dict, Union, Optional, Any, Sequence, cast
+
 import numpy as np
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve  # type: ignore
 from .constants import (
     BOLTZMAN_CONSTANT,
     AVOGADRO_CONSTANT,
@@ -32,7 +34,7 @@ from .config import Config
 from .exceptions import MixingError
 from .medium import Medium
 from .mixture import Mixture, Gas
-
+from .custom_types import PATHLIKE, MIXTURE_LIKE, MOL_TO_FLOAT
 
 CONFIG = Config()
 
@@ -44,54 +46,41 @@ class Chip:
     def __init__(
         self,
         *,
-        l_cap=STANDARD_CAPILLARY_LENGTH,
-        w_cap=STANDARD_CAPILLARY_WIDTH,
-        h_cap=STANDARD_CAPILLARY_HEIGHT,
-        carrier="He",
-        solvent="H2O",
-        dry=False,
-        medium=None,
-        T=None,
-        p=None,
-        verbose=True,
-    ):
+        l_cap: float = STANDARD_CAPILLARY_LENGTH,
+        w_cap: float = STANDARD_CAPILLARY_WIDTH,
+        h_cap: float = STANDARD_CAPILLARY_HEIGHT,
+        carrier: MIXTURE_LIKE = "He",
+        solvent: MIXTURE_LIKE = "H2O",
+        dry: bool = False,
+        verbose: bool = True,
+    ) -> None:
         """Create a Chip object given its properties
 
         Args:
-            l_cap (float): capillary length [m]
-            w_cap (float): capillary width [m]
-            h_cap (float): capillary height [m]
-            carrier (str or dict or mixture.Mixture): carrier gas.
+            l_cap (float): Capillary length [m]
+            w_cap (float): Capillary width [m]
+            h_cap (float): Capillary height [m]
+            carrier (str or dict or mixture.Mixture): Carrier gas.
                 Strings and dicts are parsed by Mixture.make()
-            solvent (str or dict or mixtrue.Mixture): solvent.
+            solvent (str or dict or mixture.Mixture): Solvent.
                 Strings and dicts are parsed by Mixture.make()
-            medium (mixture.Medium): The Medium, home of p and T. If not given, it
-                grabs the singleton Medium() without arguments. This sets p and T to
-                their defaults (STANDARD_PRESSURE and STANDARD_TEMPERATURE) if p and T
-                have not been set elsewhere.
-            p (float): system pressure in [Pa] (if to change from that in medium)
-            T (float): system temperature in [K] (if to change from that in medium)
-            dry (bool): whether the chip is dry (True) or covered in liquid (False)
-            verbose (bool): whether to print stuff to the terminal
+            dry (bool): Whether the chip is dry (True) or covered in liquid (False)
+            verbose (bool): Whether to print stuff to the terminal
         """
         self.verbose = verbose
         self.l_cap = l_cap
         self.w_cap = w_cap
         self.h_cap = h_cap
         self.dry = dry
-        if not medium:
-            medium = Medium()
-        self.medium = medium
-        if p:
-            self.p = p
-        if T:
-            self.T = T
+        self.medium = Medium()
         self._carrier = Gas.make(carrier)
-        self._solvent = Gas.make(solvent)
-        self._gas = None
+        self._solvent = Mixture.make(solvent)
+        self._gas: Optional[Gas] = None
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Return whether this Chip is equal to another"""
+        if not isinstance(other, self.__class__):
+            return False
         for dimension in "lwh":
             dimension_name = f"{dimension}_cap"
             if not isclose(
@@ -100,16 +89,18 @@ class Chip:
                 return False
         return True
 
-    def as_dict(self):
-        """Return a dictionary including everything needed to recreate self."""
+    def as_dict(self) -> Dict[str, float]:
+        """Return a dictionary including everything needed to recreate self"""
         self_as_dict = {"l_cap": self.l_cap}  # more may follow
         return self_as_dict
 
-    def save(self, file_name, chip_dir=None, **kwargs):
-        """save the self.as_dict() form of the chip to a .json file
+    def save(
+        self, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any
+    ) -> None:
+        """Save the `as_dict` form of the chip to a .json file
 
         Args:
-            file_name: name of the .json file. filename.endswith(".json")
+            file_name: Name of the .json file, should include the file suffix. filename.endswith(".json")
             chip_dir: path to directory to save chip in, defaults to :attr:`Config.chip_directory`
                 the spitze chips folder.
             kwargs: (other) key word arguments are added to self_as_dict before saving.
@@ -122,7 +113,9 @@ class Chip:
             json.dump(self_as_dict, json_file, indent=4)
 
     @classmethod
-    def load(cls, file_name, chip_dir=None, **kwargs):
+    def load(
+        cls, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any
+    ) -> "Chip":
         """loads a chip object from a .json file
 
         Args:
@@ -142,26 +135,26 @@ class Chip:
         return cls(**self_as_dict)
 
     @property
-    def carrier(self):
-        """dict or str: carrier gas in the chip. Setting carrier updates mdict."""
+    def carrier(self) -> Gas:
+        """dict or str: Carrier gas in the chip. Setting carrier updates mdict."""
         return self._carrier
 
     @carrier.setter
-    def carrier(self, carrier):
-        """carrier can be set as str or dict, interpreted by Mixture.make().
+    def carrier(self, carrier: MIXTURE_LIKE) -> None:
+        """Carrier can be set as str or dict, interpreted by `Mixture.make`.
 
-        This sets chip.gas to carrier or (if not self.dry) solvent-saturated carrier
+        This sets `chip.gas` to carrier or (if not self.dry) solvent-saturated carrier
         """
         self._carrier = Gas.make(carrier)
         self.reset_gas()
 
     @property
-    def solvent(self):
+    def solvent(self) -> Mixture:
         """Mixture: solvent on the chip membrane. Setting solvent updates mdict."""
         return self._solvent
 
     @solvent.setter
-    def solvent(self, solvent):
+    def solvent(self, solvent: MIXTURE_LIKE) -> None:
         """solvent can be set as str or dict, interpreted by Mixture.make()
 
         If not self.dry, this sets self.gas to self.carrier saturated with solvent
@@ -170,47 +163,48 @@ class Chip:
         self.reset_gas()
 
     @property
-    def gas(self):
+    def gas(self) -> Gas:
         """Gas: the gas in the chip"""
         if not self._gas:
             self.reset_gas()
         return self._gas
 
     @gas.setter
-    def gas(self, gas):
-        """gas can be set as str or dict, interpreted by Gas.make()"""
+    def gas(self, gas: MIXTURE_LIKE) -> None:
+        """Gas can be set as str or dict, interpreted by :meth:`Gas.make`"""
         self._gas = Gas.make(gas)
 
     @property
-    def p(self):
-        """Shortcut to Chip.medium.p, as carrier gas is regulated to medium pressure"""
+    def p(self) -> float:
+        """Shortcut to ``Chip.medium.p``, as carrier gas is regulated to medium pressure"""
         return self.medium.p
 
     @p.setter
-    def p(self, p):
-        """sets the system pressure in [Pa]."""
+    def p(self, p: float) -> None:
+        """Sets the system pressure in [Pa]."""
         self.medium.p = p
 
     @property
-    def T(self):
-        """Shortcut to Chip.medium.T, since we assume thermal equilibrium"""
+    def T(self) -> float:
+        """Shortcut to ``Chip.medium.T``, since we assume thermal equilibrium"""
         return self.medium.T
 
     @T.setter
-    def T(self, T):
-        """sets the system temperature in [K]."""
+    def T(self, T: float) -> None:
+        """Sets the system temperature in [K]."""
         self.medium.T = T
 
     @property
-    def wet(self):
+    def wet(self) -> bool:
         """Whether the chip has liquid on it"""
         return not self.dry
 
     @wet.setter
-    def wet(self, wet):
+    def wet(self, wet: bool) -> None:
+        """Set whether the chip has liquid on it"""
         self.dry = not wet
 
-    def reset_gas(self):
+    def reset_gas(self) -> None:
         """Reset chip's gas to carrier or (if not self.dry) solvent-saturated carrier"""
         if self.dry:
             self.gas = self.carrier
@@ -219,19 +213,25 @@ class Chip:
 
     # -------------- functions having to do with n_dot ---------------- #
 
-    def calc_n_dot(self, mol=None, gas=None, T=None, p=None):
+    def calc_n_dot(
+        self,
+        mol: Optional[str] = None,
+        gas: Optional[MIXTURE_LIKE] = None,
+        T: Optional[float] = None,
+        p: Optional[float] = None,
+    ) -> Union[float, MOL_TO_FLOAT]:
         """Calculate the flux through the capillary of a specific molecule
 
         Args:
-            mol (str): the name of a molecule in the chip's gas
-            gas (Mixture or dict or str): the gas in the chip, defaults to self.gas
-            T (float): Temperature [K], if to be updated
-            p (float): pressure [Pa], if to be updated
+            mol (str): The name of a molecule in the chip's gas
+            gas (Mixture or dict or str): The gas in the chip, defaults to self.gas
+            T (float): Temperature [K], if different from ``medium.T``
+            p (float): pressure [Pa], if different from ``medium.p``
         Returns:
-            dict: if not mol, return {i: n_dot_i} where n_dot_i is the flux in [mol/s]
-                through the capillary of each molecule in the chip's gas
+            dict: If not mol, return {i: n_dot_i} where n_dot_i is the flux in [mol/s]
+            through the capillary of each molecule in the chip's gas
             OR
-            float: if mol is given, return the flux in [mol/s] of the specified molecule
+            float: If mol is given, return the flux in [mol/s] of the specified molecule
         """
         if not gas:
             gas = self.gas
@@ -246,41 +246,54 @@ class Chip:
             print(f"the chip's gas has no {mol}! returning 0.")
             return 0
 
-    def calc_n_dot_0(self, gas=None, T=None, p=None):
+    def calc_n_dot_0(
+        self,
+        gas: Optional[MIXTURE_LIKE] = None,
+        T: Optional[float] = None,
+        p: Optional[float] = None,
+    ) -> float:
         """Calculate the total flux through the capillary in [mol/s]
 
         Uses a weighted average for gas properties and Equation 4.10 of Daniel's Thesis.
 
         Args:
-            gas (dict or str or Mixture): the gas in the chip, defaults to self.gas
-            T (float): Temperature [K], if to be updated
-            p (float): pressure [Pa], if to be updated
+            gas (dict or str or Mixture): The gas in the chip, defaults to self.gas
+            T (float): Temperature [K], if different from ``medium.T``
+            p (float): Pressure [Pa], if different from ``medium.p``
         Returns:
-            float: the total flux in [mol/s] through the capillary
+            float: The total flux in [mol/s] through the capillary
         """
         N_dot = self.calc_N_dot(T=T, p=p, gas=gas)
         n_dot_0 = N_dot / AVOGADRO_CONSTANT  # converts it from molecules/s to mol/s
         return n_dot_0
 
-    def calc_N_dot(self, w_cap=None, h_cap=None, l_cap=None, T=None, p=None, gas=None):
+    def calc_N_dot(
+        self,
+        w_cap: Optional[float] = None,
+        h_cap: Optional[float] = None,
+        l_cap: Optional[float] = None,
+        T: Optional[float] = None,
+        p: Optional[float] = None,
+        gas: Optional[MIXTURE_LIKE] = None,
+    ) -> float:
         """Calculate the total molecular flux through the capillary in [s^-1]
 
         Uses a weighted average for gas properties and Equation 4.10 of Daniel's Thesis.
 
         Args:
-            w_cap (float): capillary width [m], defaults to self.w_cap
-            h_cap (float): capillary height [m], defaults to self.h_cap
-            l_cap (float): capillary length [m], defaults to self.l_cap
-            gas (dict or str): the gas in the chip, defaults to self.gas
-            T (float): Temperature [K], if to be updated
-            p (float): pressure [Pa], if to be updated
+            w_cap (float): Capillary width [m], defaults to self.w_cap
+            h_cap (float): Capillary height [m], defaults to self.h_cap
+            l_cap (float): Capillary length [m], defaults to self.l_cap
+            T (float): Temperature [K], if different from ``medium.T``
+            p (float): Pressure [Pa], if different from ``medium.p``
+            gas (dict or str): The gas in the chip, defaults to self.gas
         Returns:
-            float: the total molecular flux in [s^-1] through the capillary
+            float: The total molecular flux in [s^-1] through the capillary
         """
         if not gas:
-            gas = self.gas
+            gas_ = self.gas
         else:
-            gas = Mixture.make(gas)
+            gas_ = Gas.make(gas)
 
         if w_cap is None:
             w_cap = self.w_cap  # capillary width in [m]
@@ -293,9 +306,9 @@ class Chip:
         if p is None:
             p = self.p
         pi = np.pi
-        eta = gas.eta  # dynamic viscosity in [Pa*s]
-        s = gas.s  # molecule diameter in [m]
-        m = gas.m  # molecule mass in [kg]
+        eta = gas_.eta  # dynamic viscosity in [Pa*s]
+        s = gas_.s  # molecule diameter in [m]
+        m = gas_.m  # molecule mass in [kg]
 
         d = ((w_cap * h_cap) / pi) ** 0.5 * 2
         # d = 4.4e-6  #used in Henriksen2009
@@ -311,7 +324,7 @@ class Chip:
         nu = (m / (BOLTZMAN_CONSTANT * T)) ** 0.5
 
         # ... and now, we're ready for the capillary equation.
-        #   (need to turn of black and flake8 for tolerable format)
+        #   (need to turn off black and flake8 for tolerable format)
         # fmt: off
         #   Equation 4.10 of Daniel's Thesis:
         N_dot = (                                                               # noqa
@@ -326,11 +339,18 @@ class Chip:
             )                                                                   # noqa
         )                                                                       # noqa
         # fmt: on
-        return N_dot
+        return cast(float, N_dot)
 
     # ---- methods for calculating the partial pressures in the chip -------- #
 
-    def calc_pp(self, n_dot, p=None, T=None, mode="solver", relaxed=None):
+    def calc_pp(
+        self,
+        n_dot: MOL_TO_FLOAT,
+        p: Optional[float] = None,
+        T: Optional[float] = None,
+        mode: str = "solver",
+        relaxed: Sequence[str] = None,
+    ) -> MOL_TO_FLOAT:
         """Return the partial pressures of the components of the gas in the chip.
 
         This method should be called after the flux (n_dot or self.n_dot) has been
@@ -338,66 +358,81 @@ class Chip:
         fluxes to partial pressures of each molecule in the gas of the chip.
         This can be done in a few ways, specified by "mode":
 
-        naive: This is the simplest. It assumes that EVERYTHING has a correctly-
+        naive
+            This is the simplest. It assumes that EVERYTHING has a correctly-
             quantified flux. The partial pressure of a molecule in the chip is then just
             the total pressure in the chip times the portion that molecule makes up in
             the sum of the calculated fluxes.
-            Advantages:
-                Simple. No use of capillary equation.
-                Robust against uniform (alpha-only) drift of sensitivity.
-            Disadvantages:
-                Convolutes uncertainty in each molecule's quantification with the
-                    uncertainty in the quantification of all other molecules.
-                Fails if there is a significant unquantified or poorly-quantified
-                    component.
 
-        water: This normalizes signals according to water's calculated vapour pressure.
             Advantages:
-                Simple. No use of capillary equation.
-                Robust against uniform (alpha-only) drift of sensitivity.
-            Disadvantages:
-                Convolutes uncertainty in each molecule's quantification with the
-                    uncertainty in H2O's quantification, and the calculation of H2O's
-                    vapour pressure calculation.
-                Fails if there isn't water.
+             * Simple. No use of capillary equation.
+             * Robust against uniform (alpha-only) drift of sensitivity.
 
-        mix_in: This is more complex. It lets the flux of the "relaxed" components of
+            Disadvantages:
+             * Convolutes uncertainty in each molecule's quantification with the
+               uncertainty in the quantification of all other molecules.
+             * Fails if there is a significant unquantified or poorly-quantified
+               component.
+
+        water
+            This normalizes signals according to water's calculated vapour pressure.
+
+            Advantages:
+             * Simple. No use of capillary equation.
+             * Robust against uniform (alpha-only) drift of sensitivity.
+
+            Disadvantages:
+             * Convolutes uncertainty in each molecule's quantification with the
+               uncertainty in H2O's quantification, and the calculation of H2O's
+               vapour pressure calculation.
+             * Fails if there isn't water.
+
+        mix_in
+            This is more complex. It lets the flux of the "relaxed" components of
             the carrier gas (typically just He) "float" in order to get the sum of the
             fluxes to match the flux as calculated by the capillary equation.
             See Chip.partial_pressure_by_mix_in for details.
-            Advantages:
-                Robust. Works without water, and works okay with significant
-                    unquantified components (it assumes that they are extra carrier).
-                Uses the sensitivity factors as absolute sensitivity factors - no
-                    implicit normalization
-            Disadvantages:
-                Complex. Uses capillary equation. Requires convergence.
-                Is influenced by uniform sensitivity drift.
 
-        He_solver: Like mix_in, this adds in the "relaxed" components of the carrier gas
+            Advantages:
+             * Robust. Works without water, and works okay with significant
+               unquantified components (it assumes that they are extra carrier).
+             * Uses the sensitivity factors as absolute sensitivity factors - no
+               implicit normalization
+
+            Disadvantages:
+             * Complex. Uses capillary equation. Requires convergence.
+             * Is influenced by uniform sensitivity drift.
+
+        He_solver
+            Like mix_in, this adds in the "relaxed" components of the carrier gas
             (typically just He) until the total flux from the MS measurements matches the
             total flux from the capillary calculation. Unlike mix_in, it uses a linear
             solver rather than an iterative approach.
+
             Advantages:
-                Robust. Works without water, and works okay with significant
-                    unquantified components (it assumes that they are extra carrier).
-                Uses the sensitivity factors as absolute sensitivity factors - no
-                    implicit normalization
+             * Robust. Works without water, and works okay with significant
+               unquantified components (it assumes that they are extra carrier).
+             * Uses the sensitivity factors as absolute sensitivity factors - no
+               implicit normalization
+
             Disadvantages:
-                Complex. Uses capillary equation. Depends on solver.
-                Is influenced by uniform sensitivity drift.
+             * Complex. Uses capillary equation. Depends on solver.
+             * Is influenced by uniform sensitivity drift.
+
+        **- - - - - - - - - - End of modes - - - - - - - - - -**
 
         Args:
             n_dot (dict): {i, n_dot_i}, where n_dot_i is flux in [mol/s] of component i
-            p (float): pressure in [Pa]. By default, uses self.medium.p
-            T (float): pressure in [Pa]. By default, uses self.medium.T
+            p (float): Pressure in [Pa], if different from ``self.medium.p``
+            T (float): Temperature in [K], if different from ``self.medium.T``
             mode (str): How to calculate partial pressures.
-            relaxed (set of str): mols to relax if using mix-in mode
+            relaxed (set of str): Mols to relax if using mix-in mode
 
         Side Effects:
-            self.gas is reset to match the partial pressures
+            ``self.gas`` is reset to match the partial pressures
 
-        Returns dict: {i: p^i} where p^i is the partial pressure of mol i in [Pa].
+        Returns
+            dict: ``{i: p^i}`` where ``p^i`` is the partial pressure of mol i in [Pa].
         """
         if self.verbose:
             print(f"chip.pp_solver got mode={mode} and n_dot={n_dot}")  # debugging
@@ -426,50 +461,54 @@ class Chip:
 
     def partial_pressures_by_mix_in(
         self,
-        n_dot=None,
-        gas_0=None,
-        p=None,
-        T=None,
-        relaxed=None,
-        tolerance=0.01,
-        N_loop=20,
-        dampening=0.5,
-    ):
+        n_dot: MOL_TO_FLOAT,
+        gas_0: Optional[MIXTURE_LIKE] = None,
+        p: Optional[float] = None,
+        T: Optional[float] = None,
+        relaxed: Sequence[str] = None,
+        tolerance: float = 0.01,
+        N_loop: float = 20,
+        dampening: float = 0.5,
+    ) -> MOL_TO_FLOAT:
         """Calculate the composition of the gas in the chip, both analyte and carrier
 
         This is a difficult, central, and subtle method in the quantification algorithm,
         so it requires some explanation.
-        Functions such as Calibration.calc_n_dot() calculate the flux through the
+
+        Functions such as ``Calibration.calc_n_dot()`` calculate the flux through the
         chip capillary of analyte molecules based on the MS signals. To calculate
         concentrations, we need to know the mass transfer function, which requires a
         calculation of the total capillary flux. However, the capillary flux depends,
         via the capillary equation, on the composition of the gas in the chip, which is
         some mix of quantified analyte molecules and as-of-yet unquantified (or only
-        roughly quantified) molecules in the carrier gas. Sanity requires that the
+        roughly quantified) molecules in the carrier gas. Naturally added is the requirement
+        that the
         total capillary flux is equal to the sum of all the individual fluxes.
         This method takes an iterative approach to solving these almost-circular
         dependencies in calculating the total capillary flux and the composition of the
-        gas in the chip. It is at present complex and non-intuitive, and thus a prime
-        candidate for study, discussion, and revision.
 
         The algorithm it uses is:
+
         0. Start by assuming the gas in the chip only contains carrier gas, and
-            define the apparent pressure in the chip to be the measured pressure.
+           define the apparent pressure in the chip to be the measured pressure.
         1. Calculate the total flux (n_dot_0) based on the temperature and
-            apparent pressure and the gas assumed to be in the chip. If dampening, mix
-            it with the previously calculated n_dot according to dampening.
+           apparent pressure and the gas assumed to be in the chip. If dampening, mix
+           it with the previously calculated n_dot according to dampening.
         2. For each molecule with a flux quantified based on measured MS signals,
-            unless that molecule is explicitly "relaxed", assume that molecule's
-            fraction in the gas in the chip is equal to its measured flux divided by
-            the total flux.
+           unless that molecule is explicitly "relaxed", assume that molecule's
+           fraction in the gas in the chip is equal to its measured flux divided by
+           the total flux.
         3. If the sum of the mol fractions is not within the tolerance (default is
-            1%) of unity:
-            a. Set the apparent pressure to the actual pressure times this sum.
-            b. Normalize the gas (i.e. divide each mol fraction by this sum), and
-            c. repeat from step (1).
+           1% of unity):
+
+           a. Set the apparent pressure to the actual pressure times this sum.
+           b. Normalize the gas (i.e. divide each mol fraction by this sum), and
+           c. Repeat from step (1).
+
         4. If the sum of the mol fractions of the gas now assumed to be in the chip is
-            within the tolerance (default is 1%) of unity, then we're good!
-            a. Return the partial pressures
+           within the tolerance (default is 1%) of unity, then we're good!
+
+           a. Return the partial pressures
 
         Steps 1-3 occur in the "mixing loop". The reason that the mixing loop
         converges is as follows: When the analyte fractions are added to the gas
@@ -482,25 +521,25 @@ class Chip:
         to the actual pressure.
 
         Args:
-            gas_0 (str or dict): initial guess at the gas in the chip. By default,
-                the initial guess is self.carrier
-            n_dot (dict): trusted fluxes of molecules [pmol/s]. By default, n_dot will
-                be self.n_dot_analyte
-            p (float): pressure [Pa] if to be updated
-            T (float): temperature [K] if to be updated
-            relaxed (set of str): names of the molecules to "relax", see above.
-            tolerance (float): how self-consistent the composition of the gas in the
+            n_dot (dict): Trusted fluxes of molecules [pmol/s]. By default, ``n_dot`` will
+                be ``self.n_dot_analyte``
+            gas_0 (str or dict): Initial guess at the gas in the chip. By default,
+                the initial guess is ``self.carrier``
+            p (float): Pressure [Pa], if different from ``self.medium.p``
+            T (float): Temperature [K], if different from ``self.medium.T``
+            relaxed (set of str): Names of the molecules to "relax", see above.
+            tolerance (float): How self-consistent the composition of the gas in the
                 chip needs to be. Default is 0.01 (i.e. 1%)
-            N_loop (int): maximum number of times in the mixing loop. Default is 20.
-            dampening (float): The weighting the previously calculated n_dot_0
-                compared to the new n_dot_0. dampening=0 uses only new. Default is 0.5
+            N_loop (int): Maximum number of times in the mixing loop. Default is 20.
+            dampening (float): The weighting the previously calculated  ``n_dot_0``
+                compared to the new ``n_dot_0``. dampening=0 uses only new. Default is 0.5
 
         Returns:
-            dict: the composition of the gas in the chip with both analyte and carrier.
-                Of the form {i:x^i} where x^i is the mol fraction of molecule i.
+            dict: The composition of the gas in the chip with both analyte and carrier.
+            On the form ``{i:x^i}`` where ``x^i`` is the mol fraction of molecule i.
 
         Raises:
-            StopIteration if the mixing loop does not converge after N_loop attempts.
+            MixingError: If the mixing loop does not converge after ``N_loop`` attempts.
         """
 
         # parse inputs, evt. getting values from self:
@@ -571,17 +610,18 @@ class Chip:
 
     def partial_pressures_by_solver(
         self,
-        n_dot=None,
-        gas_0=None,
-        p=None,
-        T=None,
-        carrier=None,
-    ):
+        n_dot: MOL_TO_FLOAT,
+        gas_0: Optional[MIXTURE_LIKE] = None,
+        p: Optional[float] = None,
+        T: Optional[float] = None,
+        carrier: Optional[Gas] = None,
+    ) -> MOL_TO_FLOAT:
         """Calculate the composition of the gas in the chip, both analyte and carrier
 
         This is a difficult, central, and subtle method in the quantification algorithm,
         so it requires some explanation.
-        Functions such as Calibration.calc_n_dot() calculate the flux through the
+
+        Functions such as ``Calibration.calc_n_dot()`` calculate the flux through the
         chip capillary of analyte molecules based on the MS signals. To calculate
         concentrations, we need to know the mass transfer function, which requires a
         calculation of the total capillary flux. However, the capillary flux depends,
@@ -591,19 +631,20 @@ class Chip:
         total capillary flux is equal to the sum of all the individual fluxes.
 
         Args:
-            gas_0 (str or dict): initial guess at the gas in the chip. By default,
-                the initial guess is self.carrier
-            n_dot (dict): trusted fluxes of molecules [pmol/s].
-            p (float): pressure [Pa] if to be updated
-            T (float): temperature [K] if to be updated
-            carrier (Gas): gas which to relax
+            n_dot (dict): Trusted fluxes of molecules [pmol/s].
+            gas_0 (str or dict): Initial guess at the gas in the chip. By default,
+                the initial guess is ``self.carrier``
+            p (float): Pressure [Pa] if different from ``self.medium.p``
+            T (float): Temperature [K] if different from ``self.medium.T``
+            carrier (Gas): Gas which to relax
 
         Returns:
-            dict: the composition of the gas in the chip with both analyte and carrier.
-                Of the form {i:p^i} where p^i is the partial pressure of molecule i.
+            dict: The composition of the gas in the chip with both analyte and carrier.
+            Of the form ``{i:p^i}`` where ``p^i`` is the partial pressure of molecule
+            ``i``.
 
         Raises:
-            StopIteration if the mixing loop does not converge after N_loop attempts.
+            StopIteration: If the mixing loop does not converge after N_loop attempts.
         """
 
         # parse inputs, evt. getting values from self:
@@ -623,7 +664,7 @@ class Chip:
             gas_0 = self.gas
         n_dot_total_guess = self.calc_n_dot_0(gas_0, p=p, T=T)
 
-        def make_gas_given_n_dot_total(n_dot_total):
+        def make_gas_given_n_dot_total(n_dot_total: float) -> Gas:
             """Return the Gas in the chip given an assumed total capillary flux"""
             comp = {
                 mol: n_dot_i / n_dot_total for mol, n_dot_i in n_dot_analyte.items()
@@ -634,8 +675,8 @@ class Chip:
             gas = Gas.make(comp)
             return gas
 
-        def n_dot_error(n_dot_total):
-            """Return the dif with the implied total flux given an assumed total flux"""
+        def n_dot_error(n_dot_total: float) -> float:
+            """Return the diff with the implied total flux given an assumed total flux"""
             # fsolve turns the argument into an np.array, causing problems:
             n_dot_total = float(n_dot_total)  # so turn it back into a float
             gas = make_gas_given_n_dot_total(n_dot_total)

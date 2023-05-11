@@ -2,23 +2,25 @@
 
 """This defines the Mixture and Gas classes
 
-These classes are general tools for dealing with Mixtures.
+These classes are general tools for dealing with Mixtures
 
 """
 
-from typing import Dict
+from typing import Dict, Optional, Tuple, Generator, List, TypeVar, Type
 
 import numpy as np
-from .molecule import MoleculeDict
+
+from .custom_types import COMPOSITION, MIXTURE_LIKE
+from .molecule import MoleculeDict, Molecule
 from .constants import (
     STANDARD_MIXTURES,
     FLUIDITY_MIXTURE_CONSTANT,
     STANDARD_PRESSURE,
     STANDARD_TEMPERATURE,
 )
+from .medium import Medium
 
-
-Composition = Dict[str, float]
+T = TypeVar("T", bound="Mixture")
 
 
 class Mixture:
@@ -27,16 +29,22 @@ class Mixture:
     A powerful wrapper around the composition dictionary comp = {i: x^i}
     """
 
-    def __init__(self, comp=None, name=None, medium=None, verbose=False):
+    def __init__(
+        self,
+        comp: Optional[COMPOSITION] = None,
+        name: Optional[str] = None,
+        medium: Optional[Medium] = None,
+        verbose: bool = False,
+    ) -> None:
         """Initiate a mixture given its composition dictionary and name
 
         Mixture can get its p and T from self.medium, if medium is given
 
         Args:
             comp (dict): {i: x^i} where x^i is the mol fraction of molecule i
-            name (str): the name of the mixture, if not str(comp)
+            name (str): The name of the mixture, defaults to str(comp)
             medium (Medium): the medium from which to read p and T (optional)
-            verbose (bool): Whether or not to print extra info to stdout
+            verbose (bool): Whether to print extra info to stdout
         """
         self.comp = comp
         self.name = name or str(comp)
@@ -45,18 +53,22 @@ class Mixture:
         self.mdict = MoleculeDict()  # This is a singleton: all of quant uses same mdict
 
     @classmethod
-    def make(cls, mix, name=None, verbose=False):
+    def make(
+        cls: Type[T],
+        mix: MIXTURE_LIKE,
+        name: Optional[str] = None,
+        verbose: bool = False,
+    ) -> T:
         """Return a Mixture object based on mix
 
         Args:
-            mix (dict or str or .Molecule or Mixture): If a dict, it has to be of the
+            mix (dict or str or `Molecule` or `Mixture`): If a dict, it has to be of the
                 form {i:x^i} where x^i is the mol fraction of molecule i in the mixture.
                 If a str, it should be the name of a standard mixture (a key to
-                STANDARD_MIXTURE), or the name of a Molecule. If a Mixture, it is
-                returned as is.
-            name (str): name to give the mixture, if not derived from mix
-            verbose (bool):
-                Whether to print to the terminal when normalizing (debugging use)
+                STANDARD_MIXTURE in the constants module), or the name of a Molecule. If a
+                Mixture, it is returned as is.
+            name (str): Name to give the mixture, if not derived from mix
+            verbose (bool): Whether to print to the terminal when normalizing (debugging use)
 
         Returns:
             Mixture with the derived comp and name
@@ -92,65 +104,65 @@ class Mixture:
                     name = mix.name
                 return cls(comp=comp, name=name)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> float:
         """Unimplemented attributes are weighted average of the Molecule attribute"""
         if "should_not_exist" in attr:
             # Ipython sometimes invokes self._ipython_canary_method_should_not_exist
-            #   No idea why, but presumably it should raise AttributeError.
+            # No idea why, but presumably it should raise AttributeError.
             raise AttributeError
         return self.calc_weighted_average(attr)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Tuple[float, Molecule]:
         """Indexing returns tuple of (fraction, Molecule) for mixture component"""
         return self.comp[key], self.mdict.get(key)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__}({self.name})"
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.comp)
 
-    def components(self):
+    def components(self) -> Generator[Tuple[float, Molecule], None, None]:
         """Iterate over (fraction, molecule) for the components of the mixture"""
         for mol, fraction in self.comp.items():
             yield fraction, self.mdict.get(mol)
 
-    def update(self, comp):
+    def update(self, comp: COMPOSITION) -> None:
         """Update the mixture with a new composition dictionary"""
         self.comp.update(comp)
 
     @property
-    def mol_list(self):
+    def mol_list(self) -> List[str]:
         return list(self.comp.keys())
 
-    # T and p can be accessed by the medium, if the Mixture's medium is defined.
+    # T and p can be accessed by the medium, if medium is given
     @property
-    def T(self):
+    def T(self) -> float:
         """Shortcut to Mixture.medium.T. Cannot be set in Mixture"""
         return self.medium.T
 
     @property
-    def p(self):
+    def p(self) -> float:
         """Shortcut to Mixture.medium.p. Cannot be set in Mixture."""
         return self.medium.p
 
     # -------- methods which calculate values from the Mixture --------- #
 
-    def calc_weighted_average(self, attr):
+    def calc_weighted_average(self, attr: str) -> float:
         """Estimate a property of a gas as a weighted average of its components
 
         Molecules without attr are ignored from the average, and if they add up to more
-        than 1% of the composition a waring is printed.
+        than 1% of the composition a warning is printed.
 
         Args:
             attr (str): An attribute of quant.Molecule. The property you want.
 
         Returns:
             float: A^avg = sum(x^i * A^i), where A is the property and x^i is the mol
-                fraction of molecule i in the gas.
+            fraction of molecule i in the gas.
         """
-        cumulative_attribute = 0
-        cumulative_fraction = 0
+        cumulative_attribute = 0.0
+        cumulative_fraction = 0.0
         for fraction, molecule in self.components():
             try:
                 value = getattr(molecule, attr)
@@ -160,8 +172,6 @@ class Mixture:
             except AttributeError:
                 if self.verbose:
                     print(f"WARNING!!! {molecule.name} has no value for {attr}.")
-            # except TypeError:
-            #    print(f"WARNING!!! {mol}.{attr} = {getattr(molecule, attr)}")
             else:
                 cumulative_fraction += fraction
         if not np.isclose(cumulative_fraction, 1, rtol=0.01) and self.verbose:
@@ -173,22 +183,26 @@ class Mixture:
 class Gas(Mixture):
     """Adds gas-specific methods and attributes to Mixture"""
 
-    def saturated_with(self, solvent="H2O", p=None, T=None):
+    def saturated_with(
+        self,
+        solvent: MIXTURE_LIKE = "H2O",
+        p: Optional[float] = None,
+        T: Optional[float] = None,
+    ) -> "Gas":
         """Return a mixture like self but with the solvent vapor pressure
 
         If p and T are not given, they come from self.medium. Unless the present gas has
-            no medium, in which case p and T are standard conditions.
+        no medium, in which case p and T are standard conditions.
         This method assumes that solvent is an ideal mixture.
 
         Args:
-            solvent (Mixture or mixture-like): solvent to saturate with, e.g. "H2O"
-                if mixture-like, made into Mixture with Mixture.make()
-            p (float): pressure [Pa]
-            T (float): temperature [K]
-            verbose (bool): whether to print to terminal if inputs not normalized
+            solvent (`Mixture` or mixture-like, see `Mixture.make`): Solvent to saturate with,
+                e.g. "H2O", if mixture-like made into Mixture with `Mixture.make`
+            p (float): Pressure [Pa]
+            T (float): Temperature [K]
 
         Returns:
-            dict: {i:x^i}, the composition of the gas in equilibrium with solvent
+            `Gas`: The resulting gas
         """
         if not p:
             p = self.medium.p if self.medium else STANDARD_PRESSURE
@@ -196,7 +210,7 @@ class Gas(Mixture):
             T = self.medium.T if self.medium else STANDARD_TEMPERATURE
 
         # we aim to get gas_comp, composition of the solvent-saturated gas.
-        #   it will start as self's comp and than add form the solvent's comp.
+        # it will start as self's comp and than form the solvent's comp.
         solvent = Mixture.make(solvent)
         solvent_comp = solvent.comp
         gas_comp = self.comp.copy()
@@ -210,29 +224,27 @@ class Gas(Mixture):
             p_vap_total += p_vap
         fraction_dry = 1 - p_vap_total / p  # the portion that is not solvent vapour
         # at this point, gas_comp is not normalized. We need to reduce the amount
-        #   of each component not in equilibrium with the vapour to normalize it.
+        # of each component not in equilibrium with the vapour to normalize it.
         for key, val in gas_comp.items():
             if key not in solvent_comp.keys():
                 gas_comp[key] = val * fraction_dry
         # now we're ready to make and return the gas! Let's name it appropriately.
         return Gas(
-            gas_comp, name=f"{solvent.name}-saturated {self.name}", medium=self.medium
+            gas_comp,
+            name=f"{solvent.name}-saturated {self.name}",
+            medium=self.medium,
         )
 
     # -------- methods which calculate values from the Gas --------- #
 
     @property
-    def dynamic_viscosity(self):
+    def dynamic_viscosity(self) -> float:
         """The dynamic viscosity in [Pa*s]. Calculated according to Davidson1993
 
         Davidson, T A. A simple and accurate method for calculating viscosity of gaseous
-            mixtures. United States: N. p., 1993. Web.
+        mixtures. United States: N. p., 1993. Web.
 
-        Reference available here:
-            ...Dropbox.../Industrial R&D/Quantification/literature/mass transport/
-                Davidson1993_viscosity_of_gas_mixture.pdf
-        And here:
-            https://stacks.cdc.gov/view/cdc/10045/cdc_10045_DS1.pdf
+        And here: https://stacks.cdc.gov/view/cdc/10045/cdc_10045_DS1.pdf
 
         It uses the fluidity sum equation, Equation 28 of Davidson1993
         It is fully vectorized to improve performance for complex mixtures.
@@ -242,7 +254,7 @@ class Gas(Mixture):
             return self.calc_weighted_average("dynamic_viscosity")
 
         # first, get a list of molecule names and viscosities for molecules with
-        #   viscosity available:
+        # viscosity available:
         mol_list_0 = self.mol_list
         eta_list = []
         mol_list = []
@@ -290,11 +302,11 @@ class Gas(Mixture):
         return eta
 
     @property
-    def eta(self):
+    def eta(self) -> float:
         """Pseudonymn for dynamic_viscosity in [Pa*s]"""
         return self.dynamic_viscosity
 
     @property
-    def partial_pressures(self):
+    def partial_pressures(self) -> Dict[str, float]:
         """The partial pressures of the gas's components in [Pa]"""
         return {mol: self.p * x_i for mol, x_i in self.comp.items()}
