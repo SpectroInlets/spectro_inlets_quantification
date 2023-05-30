@@ -37,9 +37,7 @@ def mass_to_M(mass: str) -> float:
     match = re.search(M_MATCH, mass)
     if match:
         return float(match.group(1))
-    raise ValueError(
-        f"Mass '{mass}' does not adhere to approved form e.g: 'M44' or 'M44-???'"
-    )
+    raise ValueError(f"Mass '{mass}' does not adhere to approved form e.g: 'M44' or 'M44-???'")
 
 
 def mass_to_pure_mass(mass: str) -> str:
@@ -54,9 +52,7 @@ def mass_to_pure_mass(mass: str) -> str:
     match = re.match(M_MATCH, mass)
     if match:
         return "M" + match.group(1)
-    raise ValueError(
-        f"Mass '{mass}' does not adhere to approved form e.g: 'M44' or 'M44-???'"
-    )
+    raise ValueError(f"Mass '{mass}' does not adhere to approved form e.g: 'M44' or 'M44-???'")
 
 
 def mass_to_setting(mass: str) -> str:
@@ -67,9 +63,7 @@ def mass_to_setting(mass: str) -> str:
             return match.group(2)[1:]
         else:
             return "FC"
-    raise ValueError(
-        f"Mass '{mass}' does not adhere to approved form 'M44' or 'M44-???'"
-    )
+    raise ValueError(f"Mass '{mass}' does not adhere to approved form 'M44' or 'M44-???'")
 
 
 def tstamp_to_date(tstamp: float) -> str:
@@ -83,9 +77,7 @@ def tstamp_to_date(tstamp: float) -> str:
     year = a.tm_year
     month = a.tm_mon
     day = a.tm_mday
-    date_string = "{0:02d}{1:1s}{2:02d}".format(
-        year % 100, chr(ord("A") + month - 1), day
-    )
+    date_string = "{0:02d}{1:1s}{2:02d}".format(year % 100, chr(ord("A") + month - 1), day)
     return date_string
 
 
@@ -125,9 +117,7 @@ def dict_equal_with_close_floats(dict1: Dict[Any, Any], dict2: Dict[Any, Any]) -
             if not dict_equal_with_close_floats(value1, value2):
                 return False
         elif type(value1) is list:
-            raise RuntimeError(
-                "list values not yet supported in `dict_equal_with_close_floats`"
-            )
+            raise RuntimeError("list values not yet supported in `dict_equal_with_close_floats`")
         elif type(value1) is float:
             if not isclose(value1, value2):
                 return False

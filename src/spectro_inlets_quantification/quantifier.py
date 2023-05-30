@@ -42,9 +42,7 @@ class Quantifier:
         mol_list: Optional[MOLLIST] = None,
         mass_list: Optional[MASSLIST] = None,
         mol_and_mass_list_pairs: Optional[Sequence[Tuple[MOLLIST, MASSLIST]]] = None,
-        sensitivity_matrices: Dict[
-            str, Union[SensitivityMatrix, List[SensitivityMatrix]]
-        ] = None,
+        sensitivity_matrices: Dict[str, Union[SensitivityMatrix, List[SensitivityMatrix]]] = None,
         # quantification measurement external conditions:
         carrier: MIXTURE_LIKE = None,
         chip: Union[Chip, str] = "standard.json",
@@ -106,9 +104,7 @@ class Quantifier:
         )
 
         if sensitivity_matrices:
-            self._sm_list = cast(
-                List[SensitivityMatrix], sensitivity_matrices["sm_list"]
-            )
+            self._sm_list = cast(List[SensitivityMatrix], sensitivity_matrices["sm_list"])
             self._master_sm = cast(SensitivityMatrix, sensitivity_matrices["master_sm"])
         else:
             self._sm_list = []
@@ -193,9 +189,7 @@ class Quantifier:
         """
         return {
             "sensitivity_matrices": {
-                "sm_list": [
-                    sensitivity_matrix.as_dict() for sensitivity_matrix in self.sm_list
-                ],
+                "sm_list": [sensitivity_matrix.as_dict() for sensitivity_matrix in self.sm_list],
                 "master_sm": self.master_sm.as_dict(),
             },
             "pp_mode": self.pp_mode,
@@ -204,9 +198,7 @@ class Quantifier:
 
     def make_sm(self, mol_list: MOLLIST, mass_list: MASSLIST) -> SensitivityMatrix:
         """Shortcut to the Calibration's `make_sensitivity_matrix`"""
-        return self.calibration.make_sensitivity_matrix(
-            mol_list=mol_list, mass_list=mass_list
-        )
+        return self.calibration.make_sensitivity_matrix(mol_list=mol_list, mass_list=mass_list)
 
     @property
     def sm(self) -> Optional[SensitivityMatrix]:
@@ -338,13 +330,9 @@ class Quantifier:
         for n in sequence:
             sm = self.sm_list[n]
             if self.verbose:
-                print(
-                    f"\n### Quantifier.calc_n_dot is applying the #{n} " f"sm: {sm} ###"
-                )
+                print(f"\n### Quantifier.calc_n_dot is applying the #{n} " f"sm: {sm} ###")
             all_explained_signals = self.master_sm.calc_signal(n_dot=n_dot)
-            explained_signals = {
-                mass: all_explained_signals[mass] for mass in sm.mass_list
-            }
+            explained_signals = {mass: all_explained_signals[mass] for mass in sm.mass_list}
             unexplained_signals = {
                 mass: signals[mass] - explained_signals[mass] for mass in sm.mass_list
             }

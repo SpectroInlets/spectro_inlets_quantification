@@ -112,9 +112,7 @@ class CalPoint(SensitivityFactor):
         if quantity == "n_dot":
             return n_dot_lim
         if not chip:
-            raise TypeError(
-                "need a chip to calculate detection limit as pressure or concentration"
-            )
+            raise TypeError("need a chip to calculate detection limit as pressure or concentration")
         T = chip.T
         p = chip.p
         n_dot_0 = chip.calc_n_dot_0()
@@ -123,9 +121,7 @@ class CalPoint(SensitivityFactor):
         if quantity == "c":
             H = MoleculeDict().get(self.mol).calc_H(n_dot_0=n_dot_0, T=T, p=p)
             return n_dot_lim / H
-        raise NotImplementedError(
-            "Options for detection limit quantity are 'n_dot', 'p', and 'c'"
-        )
+        raise NotImplementedError("Options for detection limit quantity are 'n_dot', 'p', and 'c'")
 
 
 class Calibration(SensitivityList):
@@ -149,9 +145,7 @@ class Calibration(SensitivityList):
         date: Optional[str] = None,
         description: Optional[str] = None,
         default_setting: Optional[str] = None,
-        mol_props: Optional[
-            Dict[str, Any]
-        ] = None,  # will override stored molecule properties
+        mol_props: Optional[Dict[str, Any]] = None,  # will override stored molecule properties
         fit_specs: Optional[Dict[str, float]] = None,
         mdict: Optional[MoleculeDict] = None,
         **kwargs: Any,  # extra stuff, such as external settings during calibration
@@ -266,9 +260,7 @@ class Calibration(SensitivityList):
             json.dump(self_as_dict, json_file, indent=4)
 
     @classmethod
-    def load(
-        cls, file_name: PATHLIKE, cal_dir: PATHLIKE = None, **kwargs: Any
-    ) -> "Calibration":
+    def load(cls, file_name: PATHLIKE, cal_dir: PATHLIKE = None, **kwargs: Any) -> "Calibration":
         """Loads a calibration object from a .json file
 
         Args:
@@ -290,13 +282,9 @@ class Calibration(SensitivityList):
         cal_list = [CalPoint(**cal_dict) for cal_dict in cal_dicts]
         self_as_dict["cal_list"] = cal_list
 
-        if "fit_specs" not in self_as_dict and (
-            "alpha" in self_as_dict and "beta" in self_as_dict
-        ):
+        if "fit_specs" not in self_as_dict and ("alpha" in self_as_dict and "beta" in self_as_dict):
             # this will be the case for old calibration files
-            fit_specs = dict(
-                alpha=self_as_dict.pop("alpha"), beta=self_as_dict.pop("beta")
-            )
+            fit_specs = dict(alpha=self_as_dict.pop("alpha"), beta=self_as_dict.pop("beta"))
             self_as_dict["fit_specs"] = fit_specs
 
         self_as_dict.update(kwargs)
@@ -402,9 +390,7 @@ class Calibration(SensitivityList):
         try:
             return cast(Molecule, self.mdict[key])
         except KeyError:
-            raise KeyError(
-                f"self.mdict has no key '{key}'. Try self.molecule('{key}')."
-            )
+            raise KeyError(f"self.mdict has no key '{key}'. Try self.molecule('{key}').")
 
     def molecule(self, mol: MOL) -> Molecule:
         """Return a `Molecule` instance, calibrated if possible

@@ -83,9 +83,7 @@ class Chip:
             return False
         for dimension in "lwh":
             dimension_name = f"{dimension}_cap"
-            if not isclose(
-                getattr(self, dimension_name), getattr(other, dimension_name)
-            ):
+            if not isclose(getattr(self, dimension_name), getattr(other, dimension_name)):
                 return False
         return True
 
@@ -94,9 +92,7 @@ class Chip:
         self_as_dict = {"l_cap": self.l_cap}  # more may follow
         return self_as_dict
 
-    def save(
-        self, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any
-    ) -> None:
+    def save(self, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> None:
         """Save the `as_dict` form of the chip to a .json file
 
         Args:
@@ -113,9 +109,7 @@ class Chip:
             json.dump(self_as_dict, json_file, indent=4)
 
     @classmethod
-    def load(
-        cls, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any
-    ) -> "Chip":
+    def load(cls, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> "Chip":
         """loads a chip object from a .json file
 
         Args:
@@ -443,19 +437,13 @@ class Chip:
             return self.gas.partial_pressures
         elif mode in ["water", "H2O"]:
             p_H2O = self.gas.mdict["H2O"].calc_p_vap(T=T)
-            comp = {
-                mol: p_H2O * n_dot_i / n_dot["H2O"] for mol, n_dot_i in n_dot.items()
-            }
+            comp = {mol: p_H2O * n_dot_i / n_dot["H2O"] for mol, n_dot_i in n_dot.items()}
             self.gas = Gas.make(comp)
             return self.gas.partial_pressures
         elif mode in ["mix_in", "mix in"]:
-            return self.partial_pressures_by_mix_in(
-                n_dot=n_dot, p=p, T=T, relaxed=relaxed
-            )
+            return self.partial_pressures_by_mix_in(n_dot=n_dot, p=p, T=T, relaxed=relaxed)
         elif mode in ["n_dot_0_solver", "He_solver", "solver"]:
-            return self.partial_pressures_by_solver(
-                n_dot=n_dot, p=p, T=T, carrier=self.carrier
-            )
+            return self.partial_pressures_by_solver(n_dot=n_dot, p=p, T=T, carrier=self.carrier)
         else:
             raise NotImplementedError(f"calc_pp with mode={mode} is not implemented!")
 
@@ -578,9 +566,7 @@ class Chip:
             print(f"n_dot_0 = {n_dot_0 * 1e9} nmol/s and \ngas = {gas}")  # debugging
 
             # Step (2) of the algorithm described in the docstring:
-            gas_analyte_comp = {
-                mol: n_dot_i / n_dot_0 for mol, n_dot_i in n_dot_analyte.items()
-            }
+            gas_analyte_comp = {mol: n_dot_i / n_dot_0 for mol, n_dot_i in n_dot_analyte.items()}
 
             print(f"gas_analyte_comp = {gas_analyte_comp}")  # debugging
             gas.update(gas_analyte_comp)
@@ -666,9 +652,7 @@ class Chip:
 
         def make_gas_given_n_dot_total(n_dot_total: float) -> Gas:
             """Return the Gas in the chip given an assumed total capillary flux"""
-            comp = {
-                mol: n_dot_i / n_dot_total for mol, n_dot_i in n_dot_analyte.items()
-            }
+            comp = {mol: n_dot_i / n_dot_total for mol, n_dot_i in n_dot_analyte.items()}
             mol_fraction_carrier = 1 - sum(comp.values())
             for mol in carrier.mol_list:
                 comp[mol] = carrier.comp[mol] * mol_fraction_carrier

@@ -171,9 +171,7 @@ class Molecule:
         """Normalized version of self.spectrum"""
         return self.calc_norm_spectrum()
 
-    def save(
-        self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None
-    ) -> None:
+    def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
         """Save the `as_dict` form of the molecule to a .json file
 
         Args:
@@ -275,18 +273,14 @@ class Molecule:
         """
         sigma = self.sigma
         if sigma is None:
-            raise AttributeError(
-                f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}"
-            )
+            raise AttributeError(f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}")
         if E_ion is None:
             E_ion = self.E_ion
         if E_ion in sigma:
             return sigma[E_ion]
         else:
             if self.verbose:
-                print(
-                    f"getting sigma at E_ion = {E_ion} for {self.name} by interpolation"
-                )
+                print(f"getting sigma at E_ion = {E_ion} for {self.name} by interpolation")
             E, sig = zip(*list(sigma.items()))
             E, sig = np.array([float(E_n) for E_n in E]), np.array(sig)
             I_sort = np.argsort(E)
@@ -310,9 +304,7 @@ class Molecule:
                 print(f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}")
                 raise TypeError
             if sigma_single < 0:
-                raise AttributeError(
-                    f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}"
-                )
+                raise AttributeError(f"Can't get E_ion={E_ion} from {self.name} with sigma={sigma}")
 
             return sigma_single
 
@@ -619,6 +611,4 @@ class Molecule:
             return portion_HA
         if description == "volatile above":
             return 1 - portion_HA
-        raise NotImplementedError(
-            f"Don't know how {self.name} can be '{description}' pKa={pKa}"
-        )
+        raise NotImplementedError(f"Don't know how {self.name} can be '{description}' pKa={pKa}")

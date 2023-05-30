@@ -104,9 +104,7 @@ class SensitivityFactor:
         """Return the mass component of `mass` as a float"""
         return mass_to_M(self.mass)
 
-    def union(
-        self, other: Union["SensitivityUnion", "SensitivityFactor"]
-    ) -> "SensitivityUnion":
+    def union(self, other: Union["SensitivityUnion", "SensitivityFactor"]) -> "SensitivityUnion":
         """Return the `SensitivityUnion` of this object with a `SensitivityUnion` or
         `SensitivityFactor`
 
@@ -116,15 +114,11 @@ class SensitivityFactor:
             raise TypeError(f"can't combine {self} and {other}")
         if isinstance(other, SensitivityUnion):
             return other.union(self)
-        return SensitivityUnion(
-            mol=self.mol, mass=self.mass, sf_list=[self, other], f=self.f
-        )
+        return SensitivityUnion(mol=self.mol, mass=self.mass, sf_list=[self, other], f=self.f)
 
     def as_dict(self) -> SENSITIVITYFACTOR_AS_DICT:
         """Return the dictionary representation of this object"""
-        self_as_dict = dict(
-            mol=self.mol, mass=self.mass, F=self.F, f=self.f, F_type=self.F_type
-        )
+        self_as_dict = dict(mol=self.mol, mass=self.mass, F=self.F, f=self.f, F_type=self.F_type)
         return cast(SENSITIVITYFACTOR_AS_DICT, self_as_dict)
 
     def copy(self) -> "SensitivityFactor":
@@ -151,9 +145,7 @@ class SensitivityUnion(SensitivityFactor):
 
     """
 
-    def __init__(
-        self, mol: str, mass: str, sf_list: List[SensitivityFactor], f: float
-    ) -> None:
+    def __init__(self, mol: str, mass: str, sf_list: List[SensitivityFactor], f: float) -> None:
         """Initiate the sensitivity union
 
         Args:
@@ -179,9 +171,7 @@ class SensitivityUnion(SensitivityFactor):
         self_as_dict.update(sf_list=sf_dicts, F_error=self.F_error)
         return self_as_dict
 
-    def union(
-        self, other: Union["SensitivityUnion", SensitivityFactor]
-    ) -> "SensitivityUnion":
+    def union(self, other: Union["SensitivityUnion", SensitivityFactor]) -> "SensitivityUnion":
         """Return this objects `SensitivityUnion` with a `SensitivityUnion` or
         `SensitivityFactor`
 
@@ -200,9 +190,7 @@ class SensitivityUnion(SensitivityFactor):
     def copy(self) -> "SensitivityUnion":
         """Return a cloned `SensitivityUnion` of cloned SensitivityFactors"""
         new_sf_list = [sf.copy() for sf in self.sf_list]
-        return SensitivityUnion(
-            mol=self.mol, mass=self.mass, sf_list=new_sf_list, f=self.f
-        )
+        return SensitivityUnion(mol=self.mol, mass=self.mass, sf_list=new_sf_list, f=self.f)
 
     @property
     def accuracy(self) -> float:
@@ -464,9 +452,7 @@ class SensitivityMatrix:
 
     def __repr__(self) -> str:
         """Return the sensitivity matrix' string representation"""
-        return (
-            f"SensitivityMatrix(mol_list={self.mol_list}, mass_list={self.mass_list})"
-        )
+        return f"SensitivityMatrix(mol_list={self.mol_list}, mass_list={self.mass_list})"
 
     def __getitem__(
         self,
@@ -477,9 +463,7 @@ class SensitivityMatrix:
             return self.F_mat[key]
         elif isinstance(key, str):
             return self.sf_dict[key]
-        raise KeyError(
-            f"Key to SensitivityMatrix must be int, slice, tuple, or str. Got {key}"
-        )
+        raise KeyError(f"Key to SensitivityMatrix must be int, slice, tuple, or str. Got {key}")
 
     def as_dict(self) -> Dict[str, Any]:
         """Return the dictionary representation of this object
@@ -523,10 +507,7 @@ class SensitivityMatrix:
     def F_mat(self) -> NDArray[numpy.float64]:
         """The sensitivity matrix. Signal per flux in [C/mol]. Built each time"""
         return np.array(
-            [
-                [self.get_F(mol, mass) for mol in self.mol_list]
-                for mass in self.mass_list
-            ]
+            [[self.get_F(mol, mass) for mol in self.mol_list] for mass in self.mass_list]
         )
 
     def prints_F_mat(self) -> str:
@@ -613,9 +594,7 @@ class SensitivityMatrix:
             #   for the molecule. Lets assume its reference spectrum is right and
             #   scale the (biggest) one we have accordingly.
             my_spectrum = {
-                mass: sf.F
-                for mass, sf in self.sf_dict[mol].items()
-                if "predicted" not in sf.F_type
+                mass: sf.F for mass, sf in self.sf_dict[mol].items() if "predicted" not in sf.F_type
             }
         if my_spectrum:  # Then there is a measured value for mol at another mass
             ref_spectrum = cast(Dict[str, float], self.mdict.get(mol).norm_spectrum)
@@ -643,17 +622,13 @@ class SensitivityMatrix:
                 # go for the closest mass:
                 I_closest = cast(
                     int,
-                    np.argmin(
-                        [np.abs(mass_to_M(mass_) - mass_to_M(mass)) for mass_ in masses]
-                    ),
+                    np.argmin([np.abs(mass_to_M(mass_) - mass_to_M(mass)) for mass_ in masses]),
                 )
                 mass_closest = masses[I_closest]
                 F_closest_mass = Fs[I_closest]
                 if mass in ref_spectrum and mass_closest in ref_spectrum:
                     F = F_closest_mass * ref_spectrum[mass] / ref_spectrum[mass_closest]
-                    sf = SensitivityFactor(
-                        mass=mass, mol=mol, F=F, f=None, F_type="ref_spectrum"
-                    )
+                    sf = SensitivityFactor(mass=mass, mol=mol, F=F, f=None, F_type="ref_spectrum")
                     self.sf_dict[mol][mass] = sf
                     if self.verbose:
                         print(f"got {sf} via reference spectrum!")
@@ -854,9 +829,7 @@ class SensitivityFit:
         self.E_ion = E_ion
         self.mdict = MoleculeDict()
         self.__vecs = None  # vectors of F, f, and M, used internally
-        self._alpha_0: Optional[
-            float
-        ] = None  # The initial guess at the transmission function
+        self._alpha_0: Optional[float] = None  # The initial guess at the transmission function
         self._f_fun = f_fun
 
     def __eq__(self, other: object) -> bool:
@@ -1127,9 +1100,7 @@ class SensitivityFit:
         sl = self.sl
         if ax == "new":
             fig, ax = make_axis()
-            ax.set_xlabel(
-                "f / f$^{" + REFERENCE_MOLECULE + "}_{" + REFERENCE_MASS + "}$"
-            )
+            ax.set_xlabel("f / f$^{" + REFERENCE_MOLECULE + "}_{" + REFERENCE_MASS + "}$")
             ax.set_ylabel("F / [C/mol]")
         ax = cast("pyplot.Axes", ax)
         if predict is not None:

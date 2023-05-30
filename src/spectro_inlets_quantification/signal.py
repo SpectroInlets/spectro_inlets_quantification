@@ -130,9 +130,7 @@ class SignalDict:
         for mass, S_M in signals.items():
             self.set_signal(mass, S_M, t=t)
 
-    def get_signal(
-        self, mass: str, tspan: Optional[TSPAN] = None
-    ) -> TIME_SIGNAL_ARRAY_PAIR:
+    def get_signal(self, mass: str, tspan: Optional[TSPAN] = None) -> TIME_SIGNAL_ARRAY_PAIR:
         """Return (t, S_M), the time and signal vectors for mass during tspan"""
         t, S_M = self.t_vecs[mass], self.S_vecs[mass]
         if tspan:
@@ -284,9 +282,7 @@ class SignalProcessor:
 
         """
         self.mass_list = mass_list or []
-        self.mass_peaks: Dict[str, Optional[Peak]] = {
-            mass: None for mass in self.mass_list
-        }
+        self.mass_peaks: Dict[str, Optional[Peak]] = {mass: None for mass in self.mass_list}
         self.signal_dict = signal_dict or SignalDict(
             max_depth=max_depth, tstamp=tstamp, verbose=verbose
         )
@@ -339,9 +335,7 @@ class SignalProcessor:
         P1, P2 = self.nonlin_coeff
         nonlinear_factor = 1 + P1 * p_hat + P2 * p_hat**2
         if self.verbose:
-            print(
-                f"\tNonlinear factor = {nonlinear_factor} based on p_vac = {p_vac} [Pa]"
-            )
+            print(f"\tNonlinear factor = {nonlinear_factor} based on p_vac = {p_vac} [Pa]")
         return nonlinear_factor
 
     def represent_nonlinear_correction(self) -> str:  # pragma: no cover
@@ -361,9 +355,7 @@ class SignalProcessor:
         if self.verbose:
             print(f"SignalProcessor correcting signal in range m/z={[x[0], x[-1]]}.")
         nonlinear_factor = self.calc_nonlinear_factor(p_vac=p_vac)
-        bg_interp = np.zeros(
-            x.shape
-        )  # Note: Implement here when background support is in
+        bg_interp = np.zeros(x.shape)  # Note: Implement here when background support is in
         y_corrected = (y - bg_interp) / nonlinear_factor
         return y_corrected
 
@@ -482,9 +474,7 @@ class SignalProcessor:
             self.calc_signal(x=x, y=y, mass=mass, fit_width=fit_width)
         return self.signal_dict
 
-    def get_average_of_last(
-        self, N: int, mass_list: MASS_LIST = None
-    ) -> MASS_TO_SIGNAL:
+    def get_average_of_last(self, N: int, mass_list: MASS_LIST = None) -> MASS_TO_SIGNAL:
         """Return ``{mass: S_M_avg}`` where s_M_avg is the average of mass's last N scans"""
         mass_list = mass_list or self.mass_list
         return self.signal_dict.get_average_of_last(N, mass_list)

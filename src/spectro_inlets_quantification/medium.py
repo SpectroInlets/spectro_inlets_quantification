@@ -56,9 +56,7 @@ class Medium(metaclass=Singleton):
         """
         self.p = p or STANDARD_PRESSURE  # the one-and-only system p / [Pa]
         self.T = T or STANDARD_TEMPERATURE  # the one-and-only system T / [K]
-        self.p_vac = (
-            p_vac or STANDARD_VACUUM_PRESSURE
-        )  # the one-and-only system p_vac / [Pa]
+        self.p_vac = p_vac or STANDARD_VACUUM_PRESSURE  # the one-and-only system p_vac / [Pa]
         self.mixture = mixture
         if c is None:
             c = {}

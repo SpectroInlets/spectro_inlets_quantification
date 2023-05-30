@@ -303,9 +303,7 @@ class GaussPeak(Peak):
 
         sigma = abs(sigma)
 
-        y_fit = gauss_fun(self.x_fit, center, sigma, height) + self.background_function(
-            self.x_fit
-        )
+        y_fit = gauss_fun(self.x_fit, center, sigma, height) + self.background_function(self.x_fit)
         integral_f = np.sqrt(2 * np.pi) * height * sigma
         self._center = center
         self.sigma = sigma  # note that GaussPeak defines its width as its sigma
@@ -313,9 +311,7 @@ class GaussPeak(Peak):
 
         rse = self.relative_square_error
         if rse > self.tolerance:
-            raise PeakFitError(
-                f"relative_square_error = {rse} > tolerance = {self.tolerance}"
-            )
+            raise PeakFitError(f"relative_square_error = {rse} > tolerance = {self.tolerance}")
 
         self._y_fit = y_fit
         self._integral = integral_f  # ... and its integral as the analytical integral
