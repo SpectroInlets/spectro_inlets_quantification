@@ -1,7 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""This module contains functionality for processing of raw mass-spec i.e. peak fitting and
-background subtraction
+"""Functionality for processing of raw mass-spec i.e. peak fitting and background subtraction
 
 Variables with abbreviated or non-descriptive names, e.g. physical quantities:
  * S or y: signal in [A]
@@ -10,17 +9,16 @@ Variables with abbreviated or non-descriptive names, e.g. physical quantities:
  * t: time in [s]
 
 """
-from typing import Union, Optional, cast, TYPE_CHECKING, Any, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import curve_fit  # type: ignore
 
-from .constants import STANDARD_WIDTH
-from .tools import make_axis
-from .exceptions import PeakFitError
 from .compatability import TypeAlias
-
+from .constants import STANDARD_WIDTH
+from .exceptions import PeakFitError
+from .tools import make_axis
 
 if TYPE_CHECKING:
     from matplotlib import pyplot
@@ -123,7 +121,7 @@ class Peak:
 
     @property
     def x_fit(self) -> FLOAT_ARRAY:
-        """dummy x-vector only used for plotting the fit. 40 ppamu resolution."""
+        """Dummy x-vector only used for plotting the fit. 40 ppamu resolution."""
         if self._x_fit is None:
             self._x_fit = np.arange(self.x[0], self.x[-1], 0.025)
         return self._x_fit
@@ -145,7 +143,8 @@ class Peak:
     def calc_width(self) -> float:
         """Return diff. between m/z of first and last point where signal > 10% of height
 
-        This should be overwritten in inheriting classes like GaussPeak"""
+        This should be overwritten in inheriting classes like GaussPeak
+        """
         x_in_peak = self.x[self.y > self.height / 10]
         return cast(float, x_in_peak[-1] - x_in_peak[0])
 

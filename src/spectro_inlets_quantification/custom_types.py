@@ -3,11 +3,12 @@
 """This module contains useful shared types for type annotations"""
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Dict, Sequence, Union
+
 from .compatability import TypeAlias
-from typing import Union, Sequence, Dict, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from spitze.quant import Molecule, Mixture
+    from spitze.quant import Mixture, Molecule
 
 PATHLIKE: TypeAlias = Union[Path, str]
 MOL: TypeAlias = str

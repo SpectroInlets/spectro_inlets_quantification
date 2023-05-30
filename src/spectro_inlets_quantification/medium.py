@@ -5,15 +5,15 @@
 Medium, unlike the classes of .mixture, is conscious of temperature and pressure
 
 """
-from typing import Optional, Dict, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Dict, Optional
 
-from .constants import STANDARD_TEMPERATURE, STANDARD_PRESSURE, STANDARD_VACUUM_PRESSURE
+from .constants import STANDARD_PRESSURE, STANDARD_TEMPERATURE, STANDARD_VACUUM_PRESSURE
 from .tools import Singleton
 
 if TYPE_CHECKING:
-    from .molecule import MoleculeDict
-    from .mixture import Mixture
     from .custom_types import COMPOSITION
+    from .mixture import Mixture
+    from .molecule import MoleculeDict
 
 MOLECULE_TO_CONCENTRATION = Dict[str, float]
 
@@ -63,6 +63,7 @@ class Medium(metaclass=Singleton):
         self.c = c
 
     def __repr__(self) -> str:
+        """Return repr string of this object"""
         return (
             f"{self.__class__.__name__}(p={self.p}, T={self.T}, p_vac={self.p_vac}, "
             f"mixture={self.mixture}, c={self.c})"

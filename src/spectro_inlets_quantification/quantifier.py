@@ -8,24 +8,24 @@ in `Chip` and `Gas`, and the external conditions in `Medium`, to define a `Quant
 method ``calc_c(signal)`` turns data processed by `SignalProcessor` into concentrations.
 
 """
-from typing import Optional, Sequence, Tuple, Dict, Union, Set, List, Any, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
-from .medium import Medium
-from .molecule import MoleculeDict
-from .chip import Chip
 from .calibration import Calibration
+from .chip import Chip
 from .config import Config
 from .custom_types import (
-    PATHLIKE,
-    MOLLIST,
+    MASS_TO_SIGNAL,
     MASSLIST,
     MIXTURE_LIKE,
     MOL,
-    MASS_TO_SIGNAL,
     MOL_TO_FLOAT,
+    MOLLIST,
+    PATHLIKE,
 )
-from .sensitivity import SensitivityMatrix
+from .medium import Medium
 from .mixture import Gas
+from .molecule import MoleculeDict
+from .sensitivity import SensitivityMatrix
 
 CONFIG = Config()
 
@@ -149,8 +149,11 @@ class Quantifier:
         """Create object from dictionary containing the object state
 
         Args:
-            object_as_dict (dict): The dict representation of the object, as returned by
+            obj_as_dict (dict): The dict representation of the object, as returned by
                 `Quantifier.to_dict`
+            chip (Chip or string): Chip or chip string
+            carrier (MIXTURE_LIKE): The carrier as a mixture like
+            calibration_file (str): The path to the calibration file
 
         Remaining arguments as described in `__init__`.
 
@@ -209,7 +212,7 @@ class Quantifier:
 
     @property
     def sm_list(self) -> List[SensitivityMatrix]:
-        """list of `SensitivityMatrix`"""
+        """List of `SensitivityMatrix`"""
         return self._sm_list
 
     @property
@@ -330,7 +333,7 @@ class Quantifier:
         for n in sequence:
             sm = self.sm_list[n]
             if self.verbose:
-                print(f"\n### Quantifier.calc_n_dot is applying the #{n} " f"sm: {sm} ###")
+                print(f"\n### Quantifier.calc_n_dot is applying the #{n} sm: {sm} ###")
             all_explained_signals = self.master_sm.calc_signal(n_dot=n_dot)
             explained_signals = {mass: all_explained_signals[mass] for mass in sm.mass_list}
             unexplained_signals = {
@@ -396,7 +399,7 @@ class Quantifier:
         sequence: Optional[List[int]] = None,
         mode: str = None,
     ) -> MOL_TO_FLOAT:
-        """calculate the concentration [mol/m^3] for each quantified molecule
+        """Calculate the concentration [mol/m^3] for each quantified molecule
 
         Args:
             signals (dict or SignalDict): {mass: S_M}, where S_M is the signal in [A]

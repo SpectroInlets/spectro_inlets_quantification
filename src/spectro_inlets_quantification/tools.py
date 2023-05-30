@@ -12,8 +12,8 @@ This module contains tools for:
 
 import re
 import time
-from typing import Dict, Any, Tuple, TYPE_CHECKING
 from math import isclose
+from typing import TYPE_CHECKING, Any, Dict, Tuple
 
 if TYPE_CHECKING:
     from matplotlib import pyplot
@@ -98,6 +98,7 @@ class Singleton(type):
     _instances: Dict["Singleton", type] = {}
 
     def __call__(cls, *args: Any, **kwargs: Any) -> type:
+        """Return new object on first call or existing object on subsequent calls"""
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]

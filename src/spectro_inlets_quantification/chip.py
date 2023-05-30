@@ -19,22 +19,23 @@ The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_
 import json
 from math import isclose
 from pathlib import Path
-from typing import Dict, Union, Optional, Any, Sequence, cast
+from typing import Any, Dict, Optional, Sequence, Union, cast
 
 import numpy as np
 from scipy.optimize import fsolve  # type: ignore
+
+from .config import Config
 from .constants import (
-    BOLTZMAN_CONSTANT,
     AVOGADRO_CONSTANT,
-    STANDARD_CAPILLARY_WIDTH,
+    BOLTZMAN_CONSTANT,
     STANDARD_CAPILLARY_HEIGHT,
     STANDARD_CAPILLARY_LENGTH,
+    STANDARD_CAPILLARY_WIDTH,
 )
-from .config import Config
+from .custom_types import MIXTURE_LIKE, MOL_TO_FLOAT, PATHLIKE
 from .exceptions import MixingError
 from .medium import Medium
-from .mixture import Mixture, Gas
-from .custom_types import PATHLIKE, MIXTURE_LIKE, MOL_TO_FLOAT
+from .mixture import Gas, Mixture
 
 CONFIG = Config()
 
@@ -96,7 +97,8 @@ class Chip:
         """Save the `as_dict` form of the chip to a .json file
 
         Args:
-            file_name: Name of the .json file, should include the file suffix. filename.endswith(".json")
+            file_name: Name of the .json file. Should include the file suffix;
+                file_name.endswith(".json")
             chip_dir: path to directory to save chip in, defaults to :attr:`Config.chip_directory`
                 the spitze chips folder.
             kwargs: (other) key word arguments are added to self_as_dict before saving.
@@ -110,7 +112,7 @@ class Chip:
 
     @classmethod
     def load(cls, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> "Chip":
-        """loads a chip object from a .json file
+        """Loads a chip object from a .json file
 
         Args:
             file_name: name of the .json file. filename.endswith(".json")
@@ -130,7 +132,7 @@ class Chip:
 
     @property
     def carrier(self) -> Gas:
-        """dict or str: Carrier gas in the chip. Setting carrier updates mdict."""
+        """Dict or str: Carrier gas in the chip. Setting carrier updates mdict."""
         return self._carrier
 
     @carrier.setter
@@ -149,7 +151,7 @@ class Chip:
 
     @solvent.setter
     def solvent(self, solvent: MIXTURE_LIKE) -> None:
-        """solvent can be set as str or dict, interpreted by Mixture.make()
+        """Solvent can be set as str or dict, interpreted by Mixture.make()
 
         If not self.dry, this sets self.gas to self.carrier saturated with solvent
         """
@@ -425,7 +427,7 @@ class Chip:
         Side Effects:
             ``self.gas`` is reset to match the partial pressures
 
-        Returns
+        Returns:
             dict: ``{i: p^i}`` where ``p^i`` is the partial pressure of mol i in [Pa].
         """
         if self.verbose:
@@ -594,7 +596,7 @@ class Chip:
         partial_pressures = {mol: x_i * p for mol, x_i in gas.comp.items()}
         return partial_pressures
 
-    def partial_pressures_by_solver(
+    def partial_pressures_by_solver(  # noqa: C901
         self,
         n_dot: MOL_TO_FLOAT,
         gas_0: Optional[MIXTURE_LIKE] = None,

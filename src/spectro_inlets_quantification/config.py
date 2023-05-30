@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .tools import Singleton
 
-
 THIS_DIR = Path(__file__).parent
 
 

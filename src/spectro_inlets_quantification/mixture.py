@@ -6,19 +6,19 @@ These classes are general tools for dealing with Mixtures
 
 """
 
-from typing import Dict, Optional, Tuple, Generator, List, TypeVar, Type
+from typing import Dict, Generator, List, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 
-from .custom_types import COMPOSITION, MIXTURE_LIKE
-from .molecule import MoleculeDict, Molecule
 from .constants import (
-    STANDARD_MIXTURES,
     FLUIDITY_MIXTURE_CONSTANT,
+    STANDARD_MIXTURES,
     STANDARD_PRESSURE,
     STANDARD_TEMPERATURE,
 )
+from .custom_types import COMPOSITION, MIXTURE_LIKE
 from .medium import Medium
+from .molecule import Molecule, MoleculeDict
 
 T = TypeVar("T", bound="Mixture")
 
@@ -53,7 +53,7 @@ class Mixture:
         self.mdict = MoleculeDict()  # This is a singleton: all of quant uses same mdict
 
     @classmethod
-    def make(
+    def make(  # noqa: C901
         cls: Type[T],
         mix: MIXTURE_LIKE,
         name: Optional[str] = None,
@@ -117,9 +117,11 @@ class Mixture:
         return self.comp[key], self.mdict.get(key)
 
     def __repr__(self) -> str:
+        """Return repr string of this object"""
         return f"{self.__class__}({self.name})"
 
     def __len__(self) -> int:
+        """Return length (of self.comp)"""
         return len(self.comp)
 
     def components(self) -> Generator[Tuple[float, Molecule], None, None]:
@@ -133,6 +135,7 @@ class Mixture:
 
     @property
     def mol_list(self) -> List[str]:
+        """Return the molecule list"""
         return list(self.comp.keys())
 
     # T and p can be accessed by the medium, if medium is given

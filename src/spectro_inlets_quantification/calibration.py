@@ -8,26 +8,27 @@ Equivalently initiating a `SensitivityList` from a ``sf_list`` of SensitivityFac
 the way to make a calibration during dev-time is to add CalPoints to a `cal_list` and
 then use that to initiate a `Calibration`.
 """
-from pathlib import Path
-from typing import Dict, List, Union, Optional, Any, cast, TYPE_CHECKING
-
-import attr
 import json
 import time
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+
+import attr
+
+from .chip import Chip
+from .config import Config
 from .constants import STANDARD_MOL_COLORS
-from .custom_types import JSONVALUE, PATHLIKE, MOLLIST, MASSLIST, MOL, MASS
-from .tools import TODAY, mass_to_setting, mass_to_M, make_axis
-from .molecule import MoleculeDict, Molecule
+from .custom_types import JSONVALUE, MASS, MASSLIST, MOL, MOLLIST, PATHLIKE
+from .molecule import Molecule, MoleculeDict
 from .sensitivity import (  # noqa
+    SENSITIVITYLIST_FILTER_TYPE,
     SensitivityFactor,
-    SensitivityUnion,
+    SensitivityFit,
     SensitivityList,
     SensitivityMatrix,
-    SensitivityFit,
-    SENSITIVITYLIST_FILTER_TYPE,
+    SensitivityUnion,
 )
-from .config import Config
-from .chip import Chip
+from .tools import TODAY, make_axis, mass_to_M, mass_to_setting
 
 if TYPE_CHECKING:
     from matplotlib import pyplot
@@ -222,12 +223,12 @@ class Calibration(SensitivityList):
         # calibration basics:
         self_as_dict = cast(
             Dict[str, Any],
-            dict(
-                name=self.name,
-                setup=self.setup,
-                date=self.date,
-                description=self.description,
-            ),
+            {
+                "name": self.name,
+                "setup": self.setup,
+                "date": self.date,
+                "description": self.description,
+            },
         )
         # initial calibration results:
         self_as_dict.update(mol_props=self.mol_props, cal_dicts=cal_dicts)
@@ -284,7 +285,7 @@ class Calibration(SensitivityList):
 
         if "fit_specs" not in self_as_dict and ("alpha" in self_as_dict and "beta" in self_as_dict):
             # this will be the case for old calibration files
-            fit_specs = dict(alpha=self_as_dict.pop("alpha"), beta=self_as_dict.pop("beta"))
+            fit_specs = {"alpha": self_as_dict.pop("alpha"), "beta": self_as_dict.pop("beta")}
             self_as_dict["fit_specs"] = fit_specs
 
         self_as_dict.update(kwargs)
@@ -324,7 +325,7 @@ class Calibration(SensitivityList):
         self_as_dict["cal_list"] = cal_list
         return Calibration(**self_as_dict)
 
-    def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "Calibration":
+    def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "Calibration":  # noqa: A003
         """See `SensitivityList.filter`. Calibration's implementation retains metadata"""
         cal_list = SensitivityList.filter(self, **kwargs).sf_list
         self_as_dict = self.as_dict()
@@ -470,9 +471,9 @@ class Calibration(SensitivityList):
         Returns:
             SensitivityMatrix: The new active sensitivity matrix
         """
-        metadata_0 = dict(  # wow this is annoying. Can't wait for dict union with "|"
-            time=time.time(),
-        )
+        metadata_0 = {  # wow this is annoying. Can't wait for dict union with "|"
+            "time": time.time(),
+        }
         if metadata:
             metadata_0.update(metadata)
         metadata = metadata_0

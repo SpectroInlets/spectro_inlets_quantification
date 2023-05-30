@@ -160,8 +160,11 @@ class SignalDict:
         mass_list: Optional[MASS_LIST] = None,
         t: Optional[float] = None,
     ) -> MASS_TO_SIGNAL:
-        """Return signal averaged over last N iterations or t seconds for mass_list
-        (default all)"""
+        """Return signal averaged over last N iterations or t seconds for mass_list.
+
+        Defaults to all.
+
+        """
         mass_list = mass_list or self.mass_list
         if t is not None:
             now = time.time() - self.tstamp
@@ -189,6 +192,7 @@ class SignalDict:
             yield mass, self[mass]
 
     def __repr__(self) -> str:
+        """Return repr string for this object"""
         return f"SignalDict({self.signals})"
 
     def __getitem__(self, key: Union[str, int]) -> Union[float, FLOAT_ARRAY]:

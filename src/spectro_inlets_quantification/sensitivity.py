@@ -19,16 +19,16 @@ See :ref:`sec:quant` for details.
 """
 from math import isclose
 from typing import (
-    Dict,
-    Optional,
-    Union,
-    List,
-    Sequence,
-    Iterator,
-    Tuple,
-    Any,
     TYPE_CHECKING,
+    Any,
     Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
     cast,
 )
 
@@ -37,26 +37,27 @@ import numpy
 import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import minimize  # type: ignore
+
+from .compatability import TypeAlias
 from .constants import (
+    CAL_TYPE_SPECS,
     REFERENCE_MASS,
     REFERENCE_MOLECULE,
-    STANDARD_TRANSMISSION_EXPONENT,
-    STANDARD_IONIZATION_ENERGY,
-    CAL_TYPE_SPECS,
     STANDARD_COLORS,
+    STANDARD_IONIZATION_ENERGY,
     STANDARD_MOL_COLORS,
+    STANDARD_TRANSMISSION_EXPONENT,
 )
+from .custom_types import MOL_TO_FLOAT
+from .exceptions import SensitivityMatrixError
+from .molecule import MASS_TO_FLOAT, Molecule, MoleculeDict
 from .tools import (
+    dict_equal_with_close_floats,
     make_axis,
     mass_to_M,
-    mass_to_setting,
     mass_to_pure_mass,
-    dict_equal_with_close_floats,
+    mass_to_setting,
 )
-from .exceptions import SensitivityMatrixError
-from .molecule import MoleculeDict, Molecule, MASS_TO_FLOAT
-from .custom_types import MOL_TO_FLOAT
-from .compatability import TypeAlias
 
 if TYPE_CHECKING:
     from matplotlib import pyplot
@@ -105,8 +106,7 @@ class SensitivityFactor:
         return mass_to_M(self.mass)
 
     def union(self, other: Union["SensitivityUnion", "SensitivityFactor"]) -> "SensitivityUnion":
-        """Return the `SensitivityUnion` of this object with a `SensitivityUnion` or
-        `SensitivityFactor`
+        """Return `SensitivityUnion` of this object with `SensitivityUnion` or `SensitivityFactor`
 
         The object and ``other`` need to have the same `mol` and `mass`.
         """
@@ -118,7 +118,9 @@ class SensitivityFactor:
 
     def as_dict(self) -> SENSITIVITYFACTOR_AS_DICT:
         """Return the dictionary representation of this object"""
-        self_as_dict = dict(mol=self.mol, mass=self.mass, F=self.F, f=self.f, F_type=self.F_type)
+        self_as_dict = {
+            "mol": self.mol, "mass": self.mass, "F": self.F, "f": self.f, "F_type": self.F_type
+        }
         return cast(SENSITIVITYFACTOR_AS_DICT, self_as_dict)
 
     def copy(self) -> "SensitivityFactor":
@@ -172,8 +174,7 @@ class SensitivityUnion(SensitivityFactor):
         return self_as_dict
 
     def union(self, other: Union["SensitivityUnion", SensitivityFactor]) -> "SensitivityUnion":
-        """Return this objects `SensitivityUnion` with a `SensitivityUnion` or
-        `SensitivityFactor`
+        """Return `SensitivityUnion` with a `SensitivityUnion` or `SensitivityFactor`
 
         This object and ``other`` need to have the same mol and mass.
         """
@@ -245,6 +246,7 @@ class SensitivityList:
         return self
 
     def __iter__(self) -> Iterator[SensitivityFactor]:
+        """Return iterator over self.sf_list"""
         yield from self.sf_list
 
     def __repr__(self) -> str:
@@ -303,7 +305,7 @@ class SensitivityList:
             metadata=metadata,
         )
 
-    def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "SensitivityList":
+    def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "SensitivityList":  # noqa: A003
         """Return a `SensitivityList` with a subset of the contained SensitivityFactors.
 
         Best described with an example::
@@ -336,7 +338,7 @@ class SensitivityList:
                 else:
                     if not isinstance(values, (list, tuple)):
                         values = cast(Union[Sequence[int], Sequence[str]], [values])
-                    if not getattr(sf, key) in values:
+                    if getattr(sf, key) not in values:
                         good = False
             if good:
                 new_sf_list.append(sf)
@@ -421,7 +423,7 @@ class SensitivityMatrix:
             sf_dict (dict of dicts of SensitivityFactors): Two-layer dictionary with
                 sf_dict[mol][mass] = SensitivityFactor(mol=mol, mass=mass, ...)
             fit (SensitivityFit): The fit, used to predict any missing F's
-            fit_spec (dict): The parameters to pass into SensitivityFit to create its fit,
+            fit_specs (dict): The parameters to pass into SensitivityFit to create its fit,
                 instead of using the one provided as `fit`. This consists of the `as_dict`
                 return value.
             metadata (dict): Associated metadata, used by the Calibration class.
@@ -476,13 +478,13 @@ class SensitivityMatrix:
         #  https://github.com/SpectroInlets/spitze/pull/84#discussion_r889043589
 
         # sf_as_dict_list = [sf.as_dict() for sf in self.to_sensitivity_list().sf_list]
-        self_as_dict = dict(
+        self_as_dict = {
             # sf_as_dict_list=sf_as_dict_list,
-            sf_dict=self.sf_dict,
+            "sf_dict": self.sf_dict,
             # fit_specs becomes dict with {'sensitivity_list' -> [sf_dict, ...]}
-            fit_specs=self.fit.as_dict(),
-            metadata=self.metadata,
-        )
+            "fit_specs": self.fit.as_dict(),
+            "metadata": self.metadata,
+        }
         return self_as_dict
 
     def to_sensitivity_list(self) -> SensitivityList:
@@ -562,12 +564,12 @@ class SensitivityMatrix:
         self.fit.fit()
 
     def plot_F_vs_f(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "pyplot.Axes":
-        """fit the `SensitivityFactor` trend with `fit`"""
+        """Fit the `SensitivityFactor` trend with `fit`"""
         if not self.fit:
             self.make_fit(**kwargs)
         return self.fit.plot_F_vs_f()
 
-    def get_F(self, mol: str, mass: str) -> float:
+    def get_F(self, mol: str, mass: str) -> float:  # noqa: C901
         """Return the most trusted available F^{mol}_{mass}.
 
         **Priority:**
@@ -842,13 +844,13 @@ class SensitivityFit:
         self,
     ) -> Dict[str, Union[float, Dict[str, List[SENSITIVITYFACTOR_AS_DICT]]]]:
         """Dictionary representation of this object"""
-        self_as_dict = dict(
+        self_as_dict = {
             # Note that saving self.sl combined the original sensitivity list with setting
-            sensitivity_list=self.sl.as_dict(),
-            alpha=self.alpha,
-            beta=self.beta,
+            "sensitivity_list": self.sl.as_dict(),
+            "alpha": self.alpha,
+            "beta": self.beta,
             # k=self.k, E_ion=self.E_ion
-        )
+        }
         return cast(
             Dict[str, Union[float, Dict[str, List[SENSITIVITYFACTOR_AS_DICT]]]],
             self_as_dict,

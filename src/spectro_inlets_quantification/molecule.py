@@ -1,3 +1,5 @@
+# ruff: noqa: E741
+
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
 """Everything to do with physical properties of molecules
@@ -21,25 +23,25 @@ The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_
 import json
 from functools import cached_property
 from pathlib import Path
-from typing import Optional, Dict, Callable, Any, cast, Union, TYPE_CHECKING
-
-from attrs import define, field, asdict, Attribute
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
 
 import numpy as np
-from .constants import (
-    STANDARD_COLORS,
-    STANDARD_TEMPERATURE,
-    GAS_CONSTANT,
-    STANDARD_IONIZATION_ENERGY,
-    AVOGADRO_CONSTANT,
-    PKAS,
-    STANDARD_MOL_COLORS,
-)
-from .tools import make_axis, Singleton
-from .medium import Medium
-from .config import Config
+from attrs import Attribute, asdict, define, field
+
 from .compatability import TypeAlias
+from .config import Config
+from .constants import (
+    AVOGADRO_CONSTANT,
+    GAS_CONSTANT,
+    PKAS,
+    STANDARD_COLORS,
+    STANDARD_IONIZATION_ENERGY,
+    STANDARD_MOL_COLORS,
+    STANDARD_TEMPERATURE,
+)
 from .custom_types import MASS
+from .medium import Medium
+from .tools import Singleton, make_axis
 
 if TYPE_CHECKING:
     from matplotlib import pyplot
@@ -160,8 +162,11 @@ class Molecule:
         """Return a dictionary including everything needed to recreate self"""
 
         def should_serialize(attribute: Attribute, _: Any) -> bool:  # type: ignore
-            """Filter function that makes sure that only attributes that can be init'ed and
-            have not been marked as don't serialize are included in as_dict version"""
+            """Filter attributes that should not be serialized.
+
+            Filter function that makes sure that only attributes that can be init'ed and
+            have not been marked as don't serialize are included in as_dict version
+            """
             return attribute.init and attribute.metadata.get("serialize", True)
 
         return asdict(self, filter=should_serialize)
@@ -191,7 +196,7 @@ class Molecule:
     def load(
         cls, file_name: str, mol_dir: Optional[PATH_OR_STR] = None, **kwargs: Any
     ) -> "Molecule":
-        """loads a molecule object from a .json file
+        """Loads a molecule object from a .json file
 
         Args:
             file_name: Name of the .json file WITHOUT the ".json" extension
@@ -210,9 +215,9 @@ class Molecule:
         # Unfortunately, saving and loading a dict with integer keys to json
         # turns the keys into strings. This fixes that:
         try:
-            self_as_dict["sigma"] = dict(
-                [(int(key), value) for key, value in self_as_dict["sigma"].items()]
-            )
+            self_as_dict["sigma"] = {
+                int(key): value for key, value in self_as_dict["sigma"].items()
+            }
         except AttributeError:
             print(f"Warning!!! {file_name} has sigma={self_as_dict['sigma']}.")
         return cls(**self_as_dict)
@@ -246,8 +251,10 @@ class Molecule:
         return m
 
     def get_primary(self) -> MASS:
-        """Return the default mass for quantification: Pre-defined as ``self.primary`` or max of
-        spectrum"""
+        """Return the default mass for quantification.
+
+        Pre-defined as ``self.primary`` or max of spectrum.
+        """
         if self.primary is not None:
             return self.primary
         if self.spectrum is not None:
@@ -456,7 +463,7 @@ class Molecule:
                 f"Molecule {self.name} has no attr 'T_of_M' or 'beta', or both are None"
             )
 
-    def calc_Hcp(self, T: Optional[float]) -> float:
+    def calc_Hcp(self, T: Optional[float]) -> float:  # noqa: C901
         """Returns the solubility Henry's-Law constant in Sanders units: [(mol/l) / bar]
 
         Solubility is also called concentration/pressure (cp), thus the cp in Hcp.
