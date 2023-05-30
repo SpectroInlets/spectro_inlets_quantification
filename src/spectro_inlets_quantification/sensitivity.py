@@ -119,7 +119,11 @@ class SensitivityFactor:
     def as_dict(self) -> SENSITIVITYFACTOR_AS_DICT:
         """Return the dictionary representation of this object."""
         self_as_dict = {
-            "mol": self.mol, "mass": self.mass, "F": self.F, "f": self.f, "F_type": self.F_type
+            "mol": self.mol,
+            "mass": self.mass,
+            "F": self.F,
+            "f": self.f,
+            "F_type": self.F_type,
         }
         return cast(SENSITIVITYFACTOR_AS_DICT, self_as_dict)
 
