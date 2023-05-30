@@ -4,12 +4,63 @@ import platform
 from pathlib import Path
 from shutil import rmtree
 
+try:
+    from rich import print as rprint
+except ImportError:
+    rprint = print
 from invoke import task
 
 
+# The first time invoke is called, it is to install dependencies, so toml is not yet installed
+try:
+    import toml
+except ImportError:
+    toml = None
+
+
 THIS_DIR = Path(__file__).parent
+SOURCE_DIR = THIS_DIR / "src" / "spectro_inlets_quantification"
+
+@task(aliases=("ruff",))
+def lint(context, fix=False):
+    """Lint the source code with ruff"""
+    rprint("\n[bold]Linting...")
+    with context.cd(THIS_DIR):
+        arg_string = ""
+        if fix:
+            arg_string += " --fix"
+        result = context.run(f"ruff {SOURCE_DIR} {arg_string}")
+        if result.return_code == 0:
+            rprint("[bold green]Files linted. No errors.")
+    return result.return_code
 
 
+@task(aliases=("mypy", "tc"))
+def type_check(context):
+    """Run the static type checker on the source code"""
+    rprint("\n[bold]Checking types...")
+    with context.cd(THIS_DIR):
+        result = context.run(f"mypy src/")
+        if result.return_code == 0:
+            rprint("[bold green]Files type checked. No errors.")
+    return result.return_code
+
+
+@task(aliases=("fc", "black"))
+def format_code(context):
+    """Format all of zilien_qt with black"""
+    context.run(f"black {SOURCE_DIR}")
+
+
+@task(aliases=("check_black", "cb", "ccf"))
+def check_code_format(context):
+    """Check that the code is black formatted"""
+    rprint("\n[bold]Checking code style...")
+    with context.cd(THIS_DIR):
+        result = context.run(f"black --check {SOURCE_DIR}")
+        if result.return_code == 0:
+            rprint("[bold green]Code format checked. No issues.")
+    return result.return_code
 
 @task(
     aliases=["tests"],
@@ -55,19 +106,46 @@ def test(
     return result.return_code
 
 
+@task(aliases=["check", "c"])
+def checks(context):
+    """Check code with black, flake8, mypy and run tests"""
+    combined_return_code = check_code_format(context)
+    combined_return_code += lint(context)
+    combined_return_code += type_check(context)
+    combined_return_code += test(context)
+    if combined_return_code == 0:
+        rprint()
+        rprint(r"+----------+")
+        rprint(r"| All good |")
+        rprint(r"+----------+")
+    else:
+        rprint()
+        rprint(r"+---------------------+")
+        rprint(r"| [bold red]Some checks [blink]FAILED![/blink][/bold red] |")
+        rprint(r"| [bold]Check output above[/bold]  |")
+        rprint(r"+---------------------+")
+
 @task(aliases=("bd",))
 def build_docs(context):
     with context.cd(THIS_DIR / "docs"):
         context.run("sphinx-build -M html source build")
 
 
-@task(aliases=("pip", "deps", "requirements"))
+@task(aliases=("pip", "deps"))
 def dependencies(context):
     """Install all requirements and development requirements"""
-    context.run("python -m pip install --upgrade pip")
-    context.run("python -m pip install --upgrade -r requirements.txt")
-    context.run("python -m pip install --upgrade -r requirements-dev.txt")
-
+    global toml
+    if toml is None:
+        context.run("python -m pip install toml")
+        import toml
+    with context.cd(THIS_DIR):
+        context.run("python -m pip install --upgrade pip")
+        data = toml.load(THIS_DIR / "pyproject.toml")
+        context.run(f"pip install --upgrade {' '.join(data['project']['dependencies'])}")
+        context.run(
+            "pip install --upgrade "
+            f"{' '.join(data['project']['optional-dependencies']['dev'])}"
+        )
 
 
 CLEAN_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".mypy_cache", "build")
