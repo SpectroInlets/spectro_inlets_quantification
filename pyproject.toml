@@ -82,10 +82,6 @@ select = [
     "YTT", # 2020
     # "B",  # flake8-bugbear
 ]
-ignore = [
-    "D202",  # No blank lines allowed after function docstring
-    "D107",  # No docstring in __init__
-]
 
 [tool.ruff.pydocstyle]
 convention = "google"

@@ -531,7 +531,6 @@ class Chip:
         Raises:
             MixingError: If the mixing loop does not converge after ``N_loop`` attempts.
         """
-
         # parse inputs, evt. getting values from self:
         if p is None:
             p = self.p
@@ -634,7 +633,6 @@ class Chip:
         Raises:
             StopIteration: If the mixing loop does not converge after N_loop attempts.
         """
-
         # parse inputs, evt. getting values from self:
         if p is None:
             p = self.p

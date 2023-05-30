@@ -13,6 +13,12 @@ class Config(metaclass=Singleton):
     """Configuration objects."""
 
     def __init__(self, data_directory: Path = THIS_DIR / "data"):
+        """Initialize this objects attributes.
+
+        Args:
+            data_directory (Path): The path of the base data directory
+
+        """
         self._data_directory = Path(data_directory)
 
     @property

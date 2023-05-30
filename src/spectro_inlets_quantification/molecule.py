@@ -66,6 +66,7 @@ class MoleculeDict(dict, metaclass=Singleton):  # type: ignore
     """
 
     def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize this objects attributes."""
         super().__init__(*args, **kwargs)
         self.medium = Medium()  # this is likely THE place medium is defined.
 
@@ -413,7 +414,6 @@ class Molecule:
         Returns:
             matplotlib Axes: The axes on which the spectrum was plotted
         """
-
         if T_of_M is not None:
             print(f"plotting transmission-corrected spectrum for {self.name}")
             spectrum = self.calc_corr_spectrum(T_of_M=T_of_M)

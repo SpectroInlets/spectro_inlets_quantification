@@ -1017,7 +1017,6 @@ class SensitivityFit:
 
     def fit_alpha(self) -> float:
         """Return and set `alpha` which minimizes error of ``F^i_M = alpha * f^i_M``."""
-
         f_vec, F_vec, M_vec = self._vecs
         alpha_0 = self.alpha_0
 
