@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Converting raw MS data to one S_vec per mass, corrected for bg and non-linearity
+"""Converting raw MS data to one S_vec per mass, corrected for bg and non-linearity.
 
 The signal module is rather high up in the hierarchy so that it can be aware of
 system conditions (Medium) and even the calibration (which I think is the right place
@@ -92,7 +92,7 @@ class SignalDict:
         max_depth: Optional[int] = None,
         verbose: bool = False,
     ):
-        """Initiate a SignalDict, optionally with initial signals
+        """Initiate a SignalDict, optionally with initial signals.
 
         Args:
             tstamp (float): The unix time defining the start of the measurement
@@ -108,12 +108,12 @@ class SignalDict:
 
     @property
     def signals(self) -> MASS_TO_SIGNAL:
-        """This is the dictionary with the latest signal for each mass"""
+        """This is the dictionary with the latest signal for each mass."""
         S_dict = {mass: S_vec[-1] for mass, S_vec in self.S_vecs.items()}
         return S_dict
 
     def set_signal(self, mass: str, S_M: float, t: Optional[float] = None) -> None:
-        """Add the signal S_M at mass with measurement t (by default, now)"""
+        """Add the signal S_M at mass with measurement t (by default, now)."""
         t = t if t is not None else (time.time() - self.tstamp)
         so_far = self.S_vecs.get(mass, np.array([]))
         t_so_far = self.t_vecs.get(mass, np.array([]))
@@ -126,12 +126,12 @@ class SignalDict:
         self.t_vecs[mass] = t_vec
 
     def set_signals(self, signals: MASS_TO_SIGNAL, t: Optional[float] = None) -> None:
-        """Set multiple signals at once with the same measurement time which defaults to now"""
+        """Set multiple signals at once with the same measurement time which defaults to now."""
         for mass, S_M in signals.items():
             self.set_signal(mass, S_M, t=t)
 
     def get_signal(self, mass: str, tspan: Optional[TSPAN] = None) -> TIME_SIGNAL_ARRAY_PAIR:
-        """Return (t, S_M), the time and signal vectors for mass during tspan"""
+        """Return (t, S_M), the time and signal vectors for mass during tspan."""
         t, S_M = self.t_vecs[mass], self.S_vecs[mass]
         if tspan:
             mask = np.logical_and(tspan[0] < t, t < tspan[-1])
@@ -141,17 +141,17 @@ class SignalDict:
     def get_signals(
         self, mass_list: Optional[MASS_LIST] = None, tspan: Optional[TSPAN] = None
     ) -> MASS_TO_TIME_SIGNAL_ARRAY_PAIR:
-        """Return the tspan-cut time and signal vecs for each mass in mass_list"""
+        """Return the tspan-cut time and signal vecs for each mass in mass_list."""
         mass_list = mass_list or self.mass_list
         return {mass: self.get_signal(mass, tspan) for mass in mass_list}
 
     @property
     def mass_list(self) -> MASS_LIST:
-        """The mass_list of a SignalDict lists the masses for which it has signals"""
+        """The mass_list of a SignalDict lists the masses for which it has signals."""
         return list(self.S_vecs.keys())
 
     def signals_at(self, n: int) -> MASS_TO_SIGNAL:
-        """Return the {mass: S_M} at the n'th iteration (negative is WRT most recent)"""
+        """Return the {mass: S_M} at the n'th iteration (negative is WRT most recent)."""
         return {mass: S_vec[n] for mass, S_vec in self.S_vecs.items()}
 
     def get_average_of_last(
@@ -178,21 +178,21 @@ class SignalDict:
         return S_avg
 
     def __iter__(self) -> Generator[str, None, None]:
-        """Iterating a SignalDict iterates over the masses for which it has signals"""
+        """Iterating a SignalDict iterates over the masses for which it has signals."""
         for mass in self.mass_list:
             yield mass
 
     def __contains__(self, mass: str) -> bool:
-        """A mass is in a SignalDict if it contains a signal at that mass"""
+        """A mass is in a SignalDict if it contains a signal at that mass."""
         return mass in self.mass_list
 
     def items(self) -> Generator[Tuple[str, FLOAT_ARRAY], None, None]:
-        """An iterator over (mass, most recent advanced MID signal at mass)"""
+        """An iterator over (mass, most recent advanced MID signal at mass)."""
         for mass in self:
             yield mass, self[mass]
 
     def __repr__(self) -> str:
-        """Return repr string for this object"""
+        """Return repr string for this object."""
         return f"SignalDict({self.signals})"
 
     def __getitem__(self, key: Union[str, int]) -> Union[float, FLOAT_ARRAY]:
@@ -213,17 +213,17 @@ class SignalDict:
         raise KeyError
 
     def __setitem__(self, mass: str, value: float) -> None:
-        """Set the signal for mass to value with now as its measurement time"""
+        """Set the signal for mass to value with now as its measurement time."""
         self.set_signal(mass, value)
 
     def clear(self, mass: str) -> None:
-        """Remove all knowledge of a mass from the SignalDict"""
+        """Remove all knowledge of a mass from the SignalDict."""
         if mass in self:
             del self.S_vecs[mass]
             del self.t_vecs[mass]
 
     def clear_all(self) -> None:
-        """Remove all knowledge at all masses from the SignalDict"""
+        """Remove all knowledge at all masses from the SignalDict."""
         for mass in self:
             self.clear(mass)
 
@@ -233,7 +233,7 @@ class SignalDict:
         tspan: TSPAN = None,
         ax: Union[str, "pyplot.Axes"] = "new",
     ) -> "pyplot.Axes":  # pragma: no cover
-        """Plot the signal for each mass in mass_list, optionally restricted to tspan"""
+        """Plot the signal for each mass in mass_list, optionally restricted to tspan."""
         if ax == "new":
             fig, ax = make_axis()
             ax.set_xlabel("time / [s]")
@@ -248,7 +248,7 @@ class SignalDict:
 
 
 class SignalProcessor:
-    """Class for calculating one signal (S_M) from the MS data for each peak (y vs x)
+    """Class for calculating one signal (S_M) from the MS data for each peak (y vs x).
 
     The x-and-y details is actually handled by the Peak class and its family via make_peak
     Indexing a SignalProcessor with the mass M gives S_M.
@@ -265,7 +265,7 @@ class SignalProcessor:
         tstamp: Optional[float] = None,
         verbose: bool = False,
     ):
-        """Initiate a SignalProcessor processor
+        """Initiate a SignalProcessor processor.
 
         Args:
             mass_list (list of str): The names of the masses
@@ -312,28 +312,28 @@ class SignalProcessor:
 
     @property
     def signals(self) -> SignalDict:
-        """The SignalDict"""
+        """The SignalDict."""
         return self.signal_dict
 
     @property
     def p_vac(self) -> float:
-        """The mediums p_vac"""
+        """The mediums p_vac."""
         return self.medium.p_vac
 
     @property
     def tstamp(self) -> float:
-        """The unix start time of the measurement being processed"""
+        """The unix start time of the measurement being processed."""
         return self.signal_dict.tstamp
 
     @property
     def PeakClass(self) -> Type[Peak]:
-        """The type of Peak to use when calculating signals or other quantities"""
+        """The type of Peak to use when calculating signals or other quantities."""
         if self.peak_type:
             return PEAK_CLASSES[self.peak_type]
         return Peak
 
     def calc_nonlinear_factor(self, p_vac: float = None) -> float:
-        """Return the signal loss due to non-linearity given the vacuum pressure"""
+        """Return the signal loss due to non-linearity given the vacuum pressure."""
         p_vac = p_vac if p_vac is not None else self.p_vac
         p_hat = p_vac / 1e-4  # pressure in 1e-4 Pa = 1e-6 mbar
         P1, P2 = self.nonlin_coeff
@@ -343,19 +343,19 @@ class SignalProcessor:
         return nonlinear_factor
 
     def represent_nonlinear_correction(self) -> str:  # pragma: no cover
-        """String representation of the non-linearity coefficients"""
+        """String representation of the non-linearity coefficients."""
         P1, P2 = self.nonlin_coeff
         return f"factor = 1 + {P1}(p_vac/[1e-6 mbar]) + {P2}(p_vac/[1e-6 mbar])^2"
 
     def __repr__(self) -> str:
-        """The repr for this class"""
+        """The repr for this class."""
         self_as_str = f"{self.__class__}({self.represent_nonlinear_correction()})"
         return self_as_str
 
     def correct_y(
         self, x: FLOAT_ARRAY, y: FLOAT_ARRAY, p_vac: Optional[float] = None
     ) -> FLOAT_ARRAY:
-        """Return the signal y corrected for background spectrum and non-linearity"""
+        """Return the signal y corrected for background spectrum and non-linearity."""
         if self.verbose:
             print(f"SignalProcessor correcting signal in range m/z={[x[0], x[-1]]}.")
         nonlinear_factor = self.calc_nonlinear_factor(p_vac=p_vac)
@@ -427,7 +427,7 @@ class SignalProcessor:
         fit_width: float = 1.0,
         **kwargs: Any,
     ) -> float:
-        """Calculate the advanced MID signal at mass as float in [A] based on raw data
+        """Calculate the advanced MID signal at mass as float in [A] based on raw data.
 
         Uses ``self.make_peak(mass, x=x, y=y, Mspan=Mspan, width=width)`` if data given
         Otherwise uses the existing ``self.peaks[mass]``
@@ -479,12 +479,12 @@ class SignalProcessor:
         return self.signal_dict
 
     def get_average_of_last(self, N: int, mass_list: MASS_LIST = None) -> MASS_TO_SIGNAL:
-        """Return ``{mass: S_M_avg}`` where s_M_avg is the average of mass's last N scans"""
+        """Return ``{mass: S_M_avg}`` where s_M_avg is the average of mass's last N scans."""
         mass_list = mass_list or self.mass_list
         return self.signal_dict.get_average_of_last(N, mass_list)
 
     def __getattr__(self, attr: str) -> Dict[str, Any]:
-        """Return the requested attr of the stored peak for each mass in mass_list"""
+        """Return the requested attr of the stored peak for each mass in mass_list."""
         try:
             if not self.mass_peaks:
                 raise AttributeError

@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""This module contains useful shared types for type annotations"""
+"""This module contains useful shared types for type annotations."""
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Sequence, Union

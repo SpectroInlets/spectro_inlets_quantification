@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""The SensitivityFactor, SensitivityMatrix, and QuantificationMatrix classes
+"""The SensitivityFactor, SensitivityMatrix, and QuantificationMatrix classes.
 
 A few abbreviations used throughout this module:
 
@@ -73,7 +73,7 @@ SENSITIVITYLIST_FILTER_TYPE: TypeAlias = Union[str, int, Sequence[int], Sequence
 
 @attr.s
 class SensitivityFactor:
-    """Data class for storing an ``f`` and ``F``
+    """Data class for storing an ``f`` and ``F``.
 
     Attributes:
         mol (str): Name of molecule
@@ -92,21 +92,21 @@ class SensitivityFactor:
 
     @property
     def pure_mass(self) -> str:
-        """Return the pure mass component of `mass`"""
+        """Return the pure mass component of `mass`."""
         return mass_to_pure_mass(self.mass)
 
     @property
     def setting(self) -> str:
-        """Return the settings component of `mass`"""
+        """Return the settings component of `mass`."""
         return mass_to_setting(self.mass)
 
     @property
     def M(self) -> float:
-        """Return the mass component of `mass` as a float"""
+        """Return the mass component of `mass` as a float."""
         return mass_to_M(self.mass)
 
     def union(self, other: Union["SensitivityUnion", "SensitivityFactor"]) -> "SensitivityUnion":
-        """Return `SensitivityUnion` of this object with `SensitivityUnion` or `SensitivityFactor`
+        """Return `SensitivityUnion` of this object with `SensitivityUnion` or `SensitivityFactor`.
 
         The object and ``other`` need to have the same `mol` and `mass`.
         """
@@ -117,21 +117,21 @@ class SensitivityFactor:
         return SensitivityUnion(mol=self.mol, mass=self.mass, sf_list=[self, other], f=self.f)
 
     def as_dict(self) -> SENSITIVITYFACTOR_AS_DICT:
-        """Return the dictionary representation of this object"""
+        """Return the dictionary representation of this object."""
         self_as_dict = {
             "mol": self.mol, "mass": self.mass, "F": self.F, "f": self.f, "F_type": self.F_type
         }
         return cast(SENSITIVITYFACTOR_AS_DICT, self_as_dict)
 
     def copy(self) -> "SensitivityFactor":
-        """Return a new `SensitivityFactor` (or inheriting) object cloning this object"""
+        """Return a new `SensitivityFactor` (or inheriting) object cloning this object."""
         return SensitivityFactor(
             mass=self.mass, mol=self.mol, F=self.F, f=self.f, F_type=self.F_type
         )
 
 
 class SensitivityUnion(SensitivityFactor):
-    """A class combining multiple SensitivityFactors of the same mol and mass
+    """A class combining multiple SensitivityFactors of the same mol and mass.
 
     The idea behind this is to make it easy to keep track of the accuracy of each
     sensitivity factor, i.e. the variation of the same sensitivity factor measured in
@@ -148,7 +148,7 @@ class SensitivityUnion(SensitivityFactor):
     """
 
     def __init__(self, mol: str, mass: str, sf_list: List[SensitivityFactor], f: float) -> None:
-        """Initiate the sensitivity union
+        """Initiate the sensitivity union.
 
         Args:
             mol (str): Name of molecule
@@ -164,7 +164,7 @@ class SensitivityUnion(SensitivityFactor):
         self.F_error = cast(float, np.std(F_vec))
 
     def as_dict(self) -> Dict[str, Union[str, float, List[SENSITIVITYFACTOR_AS_DICT]]]:
-        """Return the dictionary representation, with the individual sf's"""
+        """Return the dictionary representation, with the individual sf's."""
         self_as_dict = cast(  # The cast here will allow for the update below
             Dict[str, Union[str, float, List[SENSITIVITYFACTOR_AS_DICT]]],
             super().as_dict(),
@@ -174,7 +174,7 @@ class SensitivityUnion(SensitivityFactor):
         return self_as_dict
 
     def union(self, other: Union["SensitivityUnion", SensitivityFactor]) -> "SensitivityUnion":
-        """Return `SensitivityUnion` with a `SensitivityUnion` or `SensitivityFactor`
+        """Return `SensitivityUnion` with a `SensitivityUnion` or `SensitivityFactor`.
 
         This object and ``other`` need to have the same mol and mass.
         """
@@ -189,33 +189,33 @@ class SensitivityUnion(SensitivityFactor):
         return SensitivityUnion(mol=self.mol, mass=self.mass, sf_list=sf_list, f=self.f)
 
     def copy(self) -> "SensitivityUnion":
-        """Return a cloned `SensitivityUnion` of cloned SensitivityFactors"""
+        """Return a cloned `SensitivityUnion` of cloned SensitivityFactors."""
         new_sf_list = [sf.copy() for sf in self.sf_list]
         return SensitivityUnion(mol=self.mol, mass=self.mass, sf_list=new_sf_list, f=self.f)
 
     @property
     def accuracy(self) -> float:
-        """The relative standard deviation of the contained sensitivity factors"""
+        """The relative standard deviation of the contained sensitivity factors."""
         return self.F_error / self.F
 
 
 class SensitivityList:
-    """A wrapper around a list of SensitivityFactors of various mol & mass"""
+    """A wrapper around a list of SensitivityFactors of various mol & mass."""
 
     def __init__(self, sf_list: List[SensitivityFactor]) -> None:
-        """Initiate a SensitivityList from a list of SensitivityFactors"""
+        """Initiate a SensitivityList from a list of SensitivityFactors."""
         self.sf_list = sf_list
 
     def __getitem__(self, key: int) -> SensitivityFactor:
-        """Return `SensitivityFactor` number ``key`` from the ``sf_list`` (zero base)"""
+        """Return `SensitivityFactor` number ``key`` from the ``sf_list`` (zero base)."""
         return self.sf_list[key]
 
     def __len__(self) -> int:
-        """Return the number of the SensitivityFactors in the object"""
+        """Return the number of the SensitivityFactors in the object."""
         return len(self.sf_list)
 
     def __add__(self, other: "SensitivityList") -> "SensitivityList":
-        """Return a `SensitivityList` with the sensitivity factors of itself and ``other``"""
+        """Return a `SensitivityList` with the sensitivity factors of itself and ``other``."""
         if isinstance(other, SensitivityList):
             sf_list = self.sf_list + other.sf_list
         else:
@@ -225,7 +225,7 @@ class SensitivityList:
     def __iadd__(
         self, other: Union["SensitivityList", Sequence[SensitivityFactor]]
     ) -> "SensitivityList":
-        """In place add the SensitivityFactors from a `SensitivityList` or list"""
+        """In place add the SensitivityFactors from a `SensitivityList` or list."""
         if isinstance(other, SensitivityList):
             self.sf_list = self.sf_list + other.sf_list
         elif isinstance(other, (list, tuple)):
@@ -236,7 +236,7 @@ class SensitivityList:
         return self
 
     def append(self, sf: SensitivityFactor) -> "SensitivityList":
-        """Add a `SensitivityFactor` to this objects list"""
+        """Add a `SensitivityFactor` to this objects list."""
         if not isinstance(sf, SensitivityFactor):
             raise TypeError(
                 f"Can only append SensitivityFactor instances to "
@@ -246,11 +246,11 @@ class SensitivityList:
         return self
 
     def __iter__(self) -> Iterator[SensitivityFactor]:
-        """Return iterator over self.sf_list"""
+        """Return iterator over self.sf_list."""
         yield from self.sf_list
 
     def __repr__(self) -> str:
-        """A somewhat verbose string representation showing all the contents"""
+        """A somewhat verbose string representation showing all the contents."""
         self_as_str = f"{self.__class__}(["
         for sf in self:
             self_as_str += f"\n\t{sf},"
@@ -260,7 +260,7 @@ class SensitivityList:
     def to_sf_dict(
         self,
     ) -> SENSITIVITYLIST_AS_DICT:
-        """Return a dictionary rearranging the sensitivity factors by [mol][mass]
+        """Return a dictionary rearranging the sensitivity factors by [mol][mass].
 
         This also joins duplicate sensitivity factors by their union() method.
         """
@@ -283,7 +283,7 @@ class SensitivityList:
         fit: "SensitivityFit" = None,
         metadata: Dict[str, Any] = None,
     ) -> "SensitivityMatrix":
-        """Return a SensitivityMatrix instance based on the contained SensitivityFactors
+        """Return a SensitivityMatrix instance based on the contained SensitivityFactors.
 
         Args:
             mol_list (list of str): The molecules of the `SensitivityMatrix`
@@ -345,14 +345,14 @@ class SensitivityList:
         return SensitivityList(new_sf_list)
 
     def as_dict(self) -> Dict[str, List[SENSITIVITYFACTOR_AS_DICT]]:
-        """Return a full dictionary representation of the sensitivity list"""
+        """Return a full dictionary representation of the sensitivity list."""
         sf_dicts = [sf.as_dict for sf in self.sf_list]
         self_as_dict = {"sensitivity_list": sf_dicts}
         return self_as_dict
 
 
 class SensitivityMatrix:
-    """Class for handling and using an array of sensitivity factors for quantification
+    """Class for handling and using an array of sensitivity factors for quantification.
 
     `SensitivityMatrix.F_mat` is the sensitivity factor matrix itself as a numpy array.
     `SensitivityMatrix` acts like `F_mat` in that indexing with integers and slices
@@ -413,7 +413,7 @@ class SensitivityMatrix:
         metadata: Dict[str, Any] = None,
         verbose: bool = False,
     ) -> None:
-        """Initiate a SensitivityMatrix
+        """Initiate a SensitivityMatrix.
 
         Args:
             mol_list (list of str): The molecules of the sensitivity matrix
@@ -443,7 +443,7 @@ class SensitivityMatrix:
         self.verbose = verbose
 
     def __eq__(self, other: object) -> bool:
-        """Returns whether a `SensitivityMatrix` is equal to another"""
+        """Returns whether a `SensitivityMatrix` is equal to another."""
         if not isinstance(other, self.__class__):
             return False
         if self.fit != other.fit:
@@ -453,14 +453,14 @@ class SensitivityMatrix:
         return True
 
     def __repr__(self) -> str:
-        """Return the sensitivity matrix' string representation"""
+        """Return the sensitivity matrix' string representation."""
         return f"SensitivityMatrix(mol_list={self.mol_list}, mass_list={self.mass_list})"
 
     def __getitem__(
         self,
         key: Union[int, slice, Tuple[int, ...], str],
     ) -> Union[NDArray[numpy.float64], STR_TO_SENSITIVITYFACTOR_OR_UNION]:
-        """Indexing returns from the sensitivity matrix or sensitivity factor stack"""
+        """Indexing returns from the sensitivity matrix or sensitivity factor stack."""
         if isinstance(key, (int, slice, tuple)):
             return self.F_mat[key]
         elif isinstance(key, str):
@@ -468,7 +468,7 @@ class SensitivityMatrix:
         raise KeyError(f"Key to SensitivityMatrix must be int, slice, tuple, or str. Got {key}")
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return the dictionary representation of this object
+        """Return the dictionary representation of this object.
 
         NOTE: Saving and loading is handled by Calibration, but that needs a dict
 
@@ -488,7 +488,7 @@ class SensitivityMatrix:
         return self_as_dict
 
     def to_sensitivity_list(self) -> SensitivityList:
-        """Return a `SensitivityList` with all the owned SensitivityFactors"""
+        """Return a `SensitivityList` with all the owned SensitivityFactors."""
         sl = SensitivityList([])
         for mol in self.sf_dict:
             for mass in self.sf_dict[mol]:
@@ -497,23 +497,23 @@ class SensitivityMatrix:
 
     @property
     def N_mol(self) -> int:
-        """Return the number of molecules in the sensitivity matrix"""
+        """Return the number of molecules in the sensitivity matrix."""
         return len(self.mol_list)
 
     @property
     def N_mass(self) -> int:
-        """Return the number of masses in the sensitivity matrix"""
+        """Return the number of masses in the sensitivity matrix."""
         return len(self.mass_list)
 
     @property
     def F_mat(self) -> NDArray[numpy.float64]:
-        """The sensitivity matrix. Signal per flux in [C/mol]. Built each time"""
+        """The sensitivity matrix. Signal per flux in [C/mol]. Built each time."""
         return np.array(
             [[self.get_F(mol, mass) for mol in self.mol_list] for mass in self.mass_list]
         )
 
     def prints_F_mat(self) -> str:
-        """Format the active sensitivity factor matrix and return the string"""
+        """Format the active sensitivity factor matrix and return the string."""
         return str(np.round(self.F_mat, decimals=3))
 
     def print_F_mat(self) -> None:
@@ -521,7 +521,7 @@ class SensitivityMatrix:
         print(self.prints_F_mat())
 
     def make_fit(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> None:
-        """Make a new fit using ``kwargs`` as filter arguments
+        """Make a new fit using ``kwargs`` as filter arguments.
 
         See `SensitivityList.filter` for help on arguments
 
@@ -537,34 +537,34 @@ class SensitivityMatrix:
 
     @property
     def fit(self) -> "SensitivityFit":
-        """The sensitivity matrix's fit of ``F`` vs ``f`` for its sensitivity factors"""
+        """The sensitivity matrix's fit of ``F`` vs ``f`` for its sensitivity factors."""
         if not self._fit:
             self.make_fit()
         return self._fit
 
     @fit.setter
     def fit(self, new_fit: "SensitivityFit") -> None:
-        """The sensitivity matrix's fit of ``F`` vs ``f`` for its sensitivity factors"""
+        """The sensitivity matrix's fit of ``F`` vs ``f`` for its sensitivity factors."""
         self._fit = new_fit
 
     @property
     def alpha(self) -> float:
-        """The overall sensitivity number (alpha)"""
+        """The overall sensitivity number (alpha)."""
         return self.fit.alpha
 
     @property
     def beta(self) -> float:
-        """The exponent of the mass-dependence of sensitivity factors (beta)"""
+        """The exponent of the mass-dependence of sensitivity factors (beta)."""
         return self.fit.beta
 
     def fit_F_vs_f(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> None:
-        """Fit the `SensitivityFactor` trend with `fit`"""
+        """Fit the `SensitivityFactor` trend with `fit`."""
         if not self.fit:
             self.make_fit(**kwargs)
         self.fit.fit()
 
     def plot_F_vs_f(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "pyplot.Axes":
-        """Fit the `SensitivityFactor` trend with `fit`"""
+        """Fit the `SensitivityFactor` trend with `fit`."""
         if not self.fit:
             self.make_fit(**kwargs)
         return self.fit.plot_F_vs_f()
@@ -720,11 +720,11 @@ class SensitivityMatrix:
         return Q_mat
 
     def print_Q_mat(self) -> None:
-        """Print the active quantification matrix in decent-looking format"""
+        """Print the active quantification matrix in decent-looking format."""
         print(np.round(self.Q_mat, decimals=2))
 
     def calc_signal(self, n_dot: MOL_TO_FLOAT) -> MOL_TO_FLOAT:
-        """Calculate and return the signal given flux by dot'ing with `F_mat`
+        """Calculate and return the signal given flux by dot'ing with `F_mat`.
 
         Args:
             n_dot (dict): Flux in [mol/s] signals for molecules in `mol_list`
@@ -740,7 +740,7 @@ class SensitivityMatrix:
         return signal
 
     def calc_n_dot(self, signals: MASS_TO_FLOAT) -> MOL_TO_FLOAT:
-        """Calculate and return the flux given signal by dot'ing with `Q_mat`
+        """Calculate and return the flux given signal by dot'ing with `Q_mat`.
 
         Args:
             signals (dict or SignalDict): MID or advanced MID signals for at least each
@@ -756,12 +756,12 @@ class SensitivityMatrix:
 
 
 def STANDARD_T_OF_M(M: float) -> float:  # should maybe move to the constants module?
-    """The standard transmission function, a function of m/z in atomic units"""
+    """The standard transmission function, a function of m/z in atomic units."""
     return cast(float, M**STANDARD_TRANSMISSION_EXPONENT)
 
 
 class SensitivityFit:
-    """Class for describing and using a trend in measured sensitivity factors
+    """Class for describing and using a trend in measured sensitivity factors.
 
     SensitivityFit has two distinct states. Fitted and not fitted. The property
     fitted is True/False correspondingly. SensitivityFit switches from not fitted to
@@ -779,7 +779,7 @@ class SensitivityFit:
         beta: Optional[float] = None,
         E_ion: Optional[int] = STANDARD_IONIZATION_ENERGY,
     ) -> None:
-        """Initiate a SensitivityFit with a `SensitivityList` and optional starting params
+        """Initiate a SensitivityFit with a `SensitivityList` and optional starting params.
 
         Typically, SensitivityFit will be initiated just with sensitivity_list (the
         `SensitivityList`) and then fit with the `fit` method. But, optionally, the fit can be
@@ -835,7 +835,7 @@ class SensitivityFit:
         self._f_fun = f_fun
 
     def __eq__(self, other: object) -> bool:
-        """Return whether this SensitivityFit is equal to another"""
+        """Return whether this SensitivityFit is equal to another."""
         if not isinstance(other, self.__class__):
             return False
         return isclose(self.alpha, other.alpha) and isclose(self.beta, other.beta)
@@ -843,7 +843,7 @@ class SensitivityFit:
     def as_dict(
         self,
     ) -> Dict[str, Union[float, Dict[str, List[SENSITIVITYFACTOR_AS_DICT]]]]:
-        """Dictionary representation of this object"""
+        """Dictionary representation of this object."""
         self_as_dict = {
             # Note that saving self.sl combined the original sensitivity list with setting
             "sensitivity_list": self.sl.as_dict(),
@@ -865,7 +865,7 @@ class SensitivityFit:
         return self_as_str
 
     def reset(self, **kwargs: Any) -> None:
-        """Shortcut to dictate from outside the fit parameters, e.g. alpha and beta"""
+        """Shortcut to dictate from outside the fit parameters, e.g. alpha and beta."""
         if "alpha" in kwargs:
             self.alpha = kwargs.pop("alpha")
         if "beta" in kwargs:
@@ -899,7 +899,7 @@ class SensitivityFit:
 
     @property
     def alpha_0(self) -> float:
-        """Initial guess at alpha for fitting"""
+        """Initial guess at alpha for fitting."""
         if not self._alpha_0:
             F_vec = np.array([])
             for sf in self.sl:
@@ -914,7 +914,7 @@ class SensitivityFit:
 
     @property
     def T_of_M(self) -> Callable[[float], float]:
-        """The transmission function, a function of m/z in atomic units"""
+        """The transmission function, a function of m/z in atomic units."""
         if not self._T_of_M:
             if self.beta:
                 self.make_T_of_M()
@@ -922,11 +922,11 @@ class SensitivityFit:
 
     @property
     def fitted(self) -> bool:
-        """Whether the `SensitivityFit` has calculated its fitting function"""
+        """Whether the `SensitivityFit` has calculated its fitting function."""
         return self.alpha is not None and self.T_of_M is not None
 
     def make_T_of_M(self) -> None:
-        """Prepare the transmission function from the transmission function exponent"""
+        """Prepare the transmission function from the transmission function exponent."""
 
         def T_of_M(M: float) -> float:
             return cast(float, M**self.beta)
@@ -934,7 +934,7 @@ class SensitivityFit:
         self._T_of_M = T_of_M
 
     def fit_beta(self) -> float:
-        """Find the value of beta minimizing the rms error of F vs f
+        """Find the value of beta minimizing the rms error of F vs f.
 
         The way it works is it actually fits a ``delta_beta`` which fixes the f's based
         on the existing (old or default) fit in order to give the best new fit. It then
@@ -946,7 +946,7 @@ class SensitivityFit:
         alpha_0 = self.alpha_0
 
         def square_error(params: Sequence[float]) -> float:
-            """Return the error of F-vs-f given alpha and a change in beta"""
+            """Return the error of F-vs-f given alpha and a change in beta."""
             alpha_i, delta_beta_i = params
             # pred. sensitivity factors based on fs from outer scope and fit params:
             Fs_pred = alpha_i * f_vec * (M_vec**delta_beta_i)
@@ -968,7 +968,7 @@ class SensitivityFit:
         return self.beta
 
     def _calc_k(self) -> None:
-        """Calculate `k` such that ``f(REFERENCE_MOLECULE, REFERENCE_MASS) = 1``"""
+        """Calculate `k` such that ``f(REFERENCE_MOLECULE, REFERENCE_MASS) = 1``."""
         T_of_M = self.T_of_M
         molecule = self.mdict.get(REFERENCE_MOLECULE)
         spectrum = molecule.calc_norm_spectrum()
@@ -979,7 +979,7 @@ class SensitivityFit:
         self._k = k
 
     def f_fun(self, mol: str, mass: str) -> float:
-        """Return the predicted relative sensitivity factor for ``mol` at ``mass``"""
+        """Return the predicted relative sensitivity factor for ``mol` at ``mass``."""
         if not self.fitted:
             self.fit()
         k = self.k
@@ -1000,13 +1000,13 @@ class SensitivityFit:
 
     @property
     def k(self) -> float:
-        """Normalization constant setting ``f(REFERENCE_MOLECULE, REFERENCE_MASS) = 1``"""
+        """Normalization constant setting ``f(REFERENCE_MOLECULE, REFERENCE_MASS) = 1``."""
         if not self._k:
             self._calc_k()
         return self._k
 
     def update_fs(self) -> None:
-        """Go through the sensitivity factors and update their f with `f_fun`
+        """Go through the sensitivity factors and update their f with `f_fun`.
 
         This copies each of the SensitivityFactors, but it is the same `SensitivityList`
         """
@@ -1016,13 +1016,13 @@ class SensitivityFit:
             self.sl.sf_list[i] = sf
 
     def fit_alpha(self) -> float:
-        """Return and set `alpha` which minimizes error of ``F^i_M = alpha * f^i_M``"""
+        """Return and set `alpha` which minimizes error of ``F^i_M = alpha * f^i_M``."""
 
         f_vec, F_vec, M_vec = self._vecs
         alpha_0 = self.alpha_0
 
         def square_error(alpha_i: float) -> float:
-            """Return the relative square error of F-vs-f given just alpha"""
+            """Return the relative square error of F-vs-f given just alpha."""
             # predict sensitivity factors based on fs from outer scope and fit alpha:
             F_vec_predicted = alpha_i * f_vec
             # compare with Fs from outer scope:
@@ -1040,7 +1040,7 @@ class SensitivityFit:
         return cast(float, alpha)
 
     def fit(self) -> None:
-        """Fit both `beta` and `alpha`, doing all the preparation steps needed in between
+        """Fit both `beta` and `alpha`, doing all the preparation steps needed in between.
 
         First, this function makes sure that there is a fits-guess of `beta` and `alpha`,
         then fits `beta` (see `SensitivityFit.fit_beta`) and thus the predicted relative
@@ -1062,13 +1062,13 @@ class SensitivityFit:
         self.update_fs()
 
     def predict_F(self, mol: str, mass: str) -> float:
-        """Predict absolute sensitivity factor for ``mol`` at ``mass`` as float in [C/mol]"""
+        """Predict absolute sensitivity factor for ``mol`` at ``mass`` as float in [C/mol]."""
         f = self.f_fun(mol, mass)
         F = self.alpha * f
         return F
 
     def predict_sf(self, mol: str, mass: str) -> SensitivityFactor:
-        """Predict sensitivity factor and return as a `SensitivityFactor` instance"""
+        """Predict sensitivity factor and return as a `SensitivityFactor` instance."""
         f = self.f_fun(mol, mass)
         F = self.alpha * f
         return SensitivityFactor(mol=mol, mass=mass, F=F, f=f, F_type="predicted")
@@ -1080,7 +1080,7 @@ class SensitivityFit:
         labels: bool = True,
         plot_fit: bool = False,
     ) -> "pyplot.Axes":
-        """Plot active (measured) vs predicted sensitivity factors
+        """Plot active (measured) vs predicted sensitivity factors.
 
         This is a way to visualize and sanity-check the active calibration factors
         stored in the calibration. Each active sensitivity factor (``F^i_M``) is plotted

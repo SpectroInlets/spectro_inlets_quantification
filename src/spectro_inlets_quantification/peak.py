@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Functionality for processing of raw mass-spec i.e. peak fitting and background subtraction
+"""Functionality for processing of raw mass-spec i.e. peak fitting and background subtraction.
 
 Variables with abbreviated or non-descriptive names, e.g. physical quantities:
  * S or y: signal in [A]
@@ -32,7 +32,7 @@ FLOAT_ARRAY: TypeAlias = NDArray[np.float64]
 
 
 class Peak:
-    """Class which implements a basic peak"""
+    """Class which implements a basic peak."""
 
     def __init__(
         self,
@@ -42,7 +42,7 @@ class Peak:
         bg: Optional[BACKGROUND] = None,
         error: bool = False,
     ):
-        """Initiate the peak with x, y and bg
+        """Initiate the peak with x, y and bg.
 
         Args:
             x (np.array): m/z values in spectrum
@@ -72,7 +72,7 @@ class Peak:
         self.error = error  # used by PeakSeries and SignalProcessor
 
     def background_function(self, x: NDArray) -> NDArray:
-        """Return the background as float (vector) for the m/z value (values) in x"""
+        """Return the background as float (vector) for the m/z value (values) in x."""
         bg = self.bg if self.bg is not None else 0.0
         try:
             iter(bg)
@@ -88,35 +88,35 @@ class Peak:
 
     @property
     def height(self) -> float:
-        """The height of the peak in [A]"""
+        """The height of the peak in [A]."""
         if not self._height:
             self._height = self.calc_height()
         return self._height
 
     @property
     def center(self) -> float:
-        """The center of the peak in m/z units"""
+        """The center of the peak in m/z units."""
         if not self._center:
             self._center = self.calc_center()
         return self._center
 
     @property
     def width(self) -> float:
-        """The width of the peak in m/z units"""
+        """The width of the peak in m/z units."""
         if not self._width:
             self._width = self.calc_width()
         return self._width
 
     @property
     def integral(self) -> float:
-        """The integral of the signal in [m/z * A]"""
+        """The integral of the signal in [m/z * A]."""
         if not self._integral:
             self._integral = self.calc_integral()
         return self._integral
 
     @property
     def y_fit(self) -> Optional[FLOAT_ARRAY]:
-        """Returns an array with fitted y-values"""
+        """Returns an array with fitted y-values."""
         return self._y_fit
 
     @property
@@ -141,7 +141,7 @@ class Peak:
         return cast(float, self.x[np.argmax(self.y)])
 
     def calc_width(self) -> float:
-        """Return diff. between m/z of first and last point where signal > 10% of height
+        """Return diff. between m/z of first and last point where signal > 10% of height.
 
         This should be overwritten in inheriting classes like GaussPeak
         """
@@ -149,24 +149,24 @@ class Peak:
         return cast(float, x_in_peak[-1] - x_in_peak[0])
 
     def calc_integral(self) -> float:
-        """Return trapezoidal integral of Peak in [m/z * A]"""
+        """Return trapezoidal integral of Peak in [m/z * A]."""
         return cast(float, np.trapz(self.y, self.x))
 
     def calc_signal(self) -> float:
-        """The signal is by default the height of the peak in [A]"""
+        """The signal is by default the height of the peak in [A]."""
         if self.error:
             return 0
         return self.height
 
     @property
     def signal(self) -> float:
-        """The signal is by default the height of the peak in [A]"""
+        """The signal is by default the height of the peak in [A]."""
         return self.calc_signal()
 
     def plot(
         self, ax: Union[str, "pyplot.Axes"] = "new", **kwargs: Any
     ) -> "pyplot.Axes":  # pragma: no cover
-        """Plot the peak and its background
+        """Plot the peak and its background.
 
         dev-time only
 
@@ -199,13 +199,13 @@ class Peak:
 def gauss_fun(
     x: FLOAT_OR_FLOAT_ARRAY, center: float, sigma: float, height: float
 ) -> FLOAT_OR_FLOAT_ARRAY:
-    """Return the Gaussian function of x with the given parameters"""
+    """Return the Gaussian function of x with the given parameters."""
     y = height * np.exp(-((x - center) ** 2) / (2 * sigma**2))
     return y
 
 
 class GaussPeak(Peak):
-    """A Peak with a gauss fit"""
+    """A Peak with a gauss fit."""
 
     def __init__(
         self,
@@ -237,7 +237,7 @@ class GaussPeak(Peak):
     def fit_gauss(
         self, center: Optional[float] = None, sigma: Optional[float] = None
     ) -> Tuple[float, float, float]:
-        """Find the Gauss function of self.x minimizing the square error with regards to self.y
+        """Find the Gauss function of self.x minimizing the square error with regards to self.y.
 
         Either or both of center and sigma can be given if they are known. If center and/or
         sigma are not known, they are fitted. The height is always fitted. The function sets
@@ -317,30 +317,30 @@ class GaussPeak(Peak):
         return center, sigma, height
 
     def y_of_x(self, x: FLOAT_ARRAY) -> FLOAT_ARRAY:
-        """Return the fit background-subtracted signal given m/z"""
+        """Return the fit background-subtracted signal given m/z."""
         y = gauss_fun(x, center=self.center, sigma=self.sigma, height=self.height)
         return y
 
     def y_raw_of_x(self, x: FLOAT_ARRAY) -> FLOAT_ARRAY:
-        """Return the fit raw signal given m/z"""
+        """Return the fit raw signal given m/z."""
         y = self.y_of_x(x)
         y_raw = y + self.background_function(x)
         return y_raw
 
     @property
     def relative_square_error(self) -> float:
-        """Return the relative square error of the fit as a float"""
+        """Return the relative square error of the fit as a float."""
         error = self.y_of_x(self.x) - self.y
         return cast(float, error.dot(error) / self.y.dot(self.y))
 
     @property
     def width(self) -> float:
-        """Return the width of the GaussPeak, defined as its sigma"""
+        """Return the width of the GaussPeak, defined as its sigma."""
         return self.sigma
 
     @property
     def fwhm(self) -> float:
-        """Return the analytical full width half maximum of the gauss peak"""
+        """Return the analytical full width half maximum of the gauss peak."""
         fwhm = 2 * np.sqrt(2 * np.log(2)) * self.sigma
         return cast(float, fwhm)
 

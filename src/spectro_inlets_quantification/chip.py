@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Everything to do with calculating the capillary flux
+"""Everything to do with calculating the capillary flux.
 
 Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 
@@ -41,7 +41,7 @@ CONFIG = Config()
 
 
 class Chip:
-    """The Chip class. Mainly used for calculating the capillary flux"""
+    """The Chip class. Mainly used for calculating the capillary flux."""
 
     # ---- methods whose primary purpose is interface with the .json ---- #
     def __init__(
@@ -55,7 +55,7 @@ class Chip:
         dry: bool = False,
         verbose: bool = True,
     ) -> None:
-        """Create a Chip object given its properties
+        """Create a Chip object given its properties.
 
         Args:
             l_cap (float): Capillary length [m]
@@ -79,7 +79,7 @@ class Chip:
         self._gas: Optional[Gas] = None
 
     def __eq__(self, other: object) -> bool:
-        """Return whether this Chip is equal to another"""
+        """Return whether this Chip is equal to another."""
         if not isinstance(other, self.__class__):
             return False
         for dimension in "lwh":
@@ -89,12 +89,12 @@ class Chip:
         return True
 
     def as_dict(self) -> Dict[str, float]:
-        """Return a dictionary including everything needed to recreate self"""
+        """Return a dictionary including everything needed to recreate self."""
         self_as_dict = {"l_cap": self.l_cap}  # more may follow
         return self_as_dict
 
     def save(self, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> None:
-        """Save the `as_dict` form of the chip to a .json file
+        """Save the `as_dict` form of the chip to a .json file.
 
         Args:
             file_name: Name of the .json file. Should include the file suffix;
@@ -112,7 +112,7 @@ class Chip:
 
     @classmethod
     def load(cls, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> "Chip":
-        """Loads a chip object from a .json file
+        """Loads a chip object from a .json file.
 
         Args:
             file_name: name of the .json file. filename.endswith(".json")
@@ -151,7 +151,7 @@ class Chip:
 
     @solvent.setter
     def solvent(self, solvent: MIXTURE_LIKE) -> None:
-        """Solvent can be set as str or dict, interpreted by Mixture.make()
+        """Solvent can be set as str or dict, interpreted by Mixture.make().
 
         If not self.dry, this sets self.gas to self.carrier saturated with solvent
         """
@@ -160,19 +160,19 @@ class Chip:
 
     @property
     def gas(self) -> Gas:
-        """Gas: the gas in the chip"""
+        """Gas: the gas in the chip."""
         if not self._gas:
             self.reset_gas()
         return self._gas
 
     @gas.setter
     def gas(self, gas: MIXTURE_LIKE) -> None:
-        """Gas can be set as str or dict, interpreted by :meth:`Gas.make`"""
+        """Gas can be set as str or dict, interpreted by :meth:`Gas.make`."""
         self._gas = Gas.make(gas)
 
     @property
     def p(self) -> float:
-        """Shortcut to ``Chip.medium.p``, as carrier gas is regulated to medium pressure"""
+        """Shortcut to ``Chip.medium.p``, as carrier gas is regulated to medium pressure."""
         return self.medium.p
 
     @p.setter
@@ -182,7 +182,7 @@ class Chip:
 
     @property
     def T(self) -> float:
-        """Shortcut to ``Chip.medium.T``, since we assume thermal equilibrium"""
+        """Shortcut to ``Chip.medium.T``, since we assume thermal equilibrium."""
         return self.medium.T
 
     @T.setter
@@ -192,16 +192,16 @@ class Chip:
 
     @property
     def wet(self) -> bool:
-        """Whether the chip has liquid on it"""
+        """Whether the chip has liquid on it."""
         return not self.dry
 
     @wet.setter
     def wet(self, wet: bool) -> None:
-        """Set whether the chip has liquid on it"""
+        """Set whether the chip has liquid on it."""
         self.dry = not wet
 
     def reset_gas(self) -> None:
-        """Reset chip's gas to carrier or (if not self.dry) solvent-saturated carrier"""
+        """Reset chip's gas to carrier or (if not self.dry) solvent-saturated carrier."""
         if self.dry:
             self.gas = self.carrier
         else:
@@ -216,7 +216,7 @@ class Chip:
         T: Optional[float] = None,
         p: Optional[float] = None,
     ) -> Union[float, MOL_TO_FLOAT]:
-        """Calculate the flux through the capillary of a specific molecule
+        """Calculate the flux through the capillary of a specific molecule.
 
         Args:
             mol (str): The name of a molecule in the chip's gas
@@ -248,7 +248,7 @@ class Chip:
         T: Optional[float] = None,
         p: Optional[float] = None,
     ) -> float:
-        """Calculate the total flux through the capillary in [mol/s]
+        """Calculate the total flux through the capillary in [mol/s].
 
         Uses a weighted average for gas properties and Equation 4.10 of Daniel's Thesis.
 
@@ -272,7 +272,7 @@ class Chip:
         p: Optional[float] = None,
         gas: Optional[MIXTURE_LIKE] = None,
     ) -> float:
-        """Calculate the total molecular flux through the capillary in [s^-1]
+        """Calculate the total molecular flux through the capillary in [s^-1].
 
         Uses a weighted average for gas properties and Equation 4.10 of Daniel's Thesis.
 
@@ -460,7 +460,7 @@ class Chip:
         N_loop: float = 20,
         dampening: float = 0.5,
     ) -> MOL_TO_FLOAT:
-        """Calculate the composition of the gas in the chip, both analyte and carrier
+        """Calculate the composition of the gas in the chip, both analyte and carrier.
 
         This is a difficult, central, and subtle method in the quantification algorithm,
         so it requires some explanation.
@@ -604,7 +604,7 @@ class Chip:
         T: Optional[float] = None,
         carrier: Optional[Gas] = None,
     ) -> MOL_TO_FLOAT:
-        """Calculate the composition of the gas in the chip, both analyte and carrier
+        """Calculate the composition of the gas in the chip, both analyte and carrier.
 
         This is a difficult, central, and subtle method in the quantification algorithm,
         so it requires some explanation.
@@ -653,7 +653,7 @@ class Chip:
         n_dot_total_guess = self.calc_n_dot_0(gas_0, p=p, T=T)
 
         def make_gas_given_n_dot_total(n_dot_total: float) -> Gas:
-            """Return the Gas in the chip given an assumed total capillary flux"""
+            """Return the Gas in the chip given an assumed total capillary flux."""
             comp = {mol: n_dot_i / n_dot_total for mol, n_dot_i in n_dot_analyte.items()}
             mol_fraction_carrier = 1 - sum(comp.values())
             for mol in carrier.mol_list:
@@ -662,7 +662,7 @@ class Chip:
             return gas
 
         def n_dot_error(n_dot_total: float) -> float:
-            """Return the diff with the implied total flux given an assumed total flux"""
+            """Return the diff with the implied total flux given an assumed total flux."""
             # fsolve turns the argument into an np.array, causing problems:
             n_dot_total = float(n_dot_total)  # so turn it back into a float
             gas = make_gas_given_n_dot_total(n_dot_total)

@@ -83,7 +83,6 @@ select = [
     # "B",  # flake8-bugbear
 ]
 ignore = [
-    "D415",  # First line should end with ., ? or !
     "D202",  # No blank lines allowed after function docstring
     "D107",  # No docstring in __init__
 ]

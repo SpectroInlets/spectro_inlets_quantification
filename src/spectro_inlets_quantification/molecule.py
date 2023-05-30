@@ -2,7 +2,7 @@
 
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Everything to do with physical properties of molecules
+"""Everything to do with physical properties of molecules.
 
 Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 
@@ -54,7 +54,7 @@ TRANSMISSION_AMPLIFICATION_FUNCTION: TypeAlias = Callable[[float], float]
 
 
 class MoleculeDict(dict, metaclass=Singleton):  # type: ignore
-    """This class implements the MoleculeDict
+    """This class implements the MoleculeDict.
 
     It is a mapping of molecule names to Molecule, which loads the Molecule, if it hasn't been
     already.
@@ -70,7 +70,7 @@ class MoleculeDict(dict, metaclass=Singleton):  # type: ignore
         self.medium = Medium()  # this is likely THE place medium is defined.
 
     def get(self, key: str) -> "Molecule":  # type: ignore
-        """Return ``Molecule -> Molecule.load(key)`` first time, then stored `Molecule` later"""
+        """Return ``Molecule -> Molecule.load(key)`` first time, then stored `Molecule` later."""
         if key not in self:
             self[key] = Molecule.load(key)
         return cast("Molecule", self[key])
@@ -147,7 +147,7 @@ class Molecule:
     medium: Medium = field(init=False, factory=Medium)
 
     def __attrs_post_init__(self) -> None:
-        """Update initialized values after ``__init__``"""
+        """Update initialized values after ``__init__``."""
         if self.spectrum is None and self.spectrum_0 is not None:
             self.spectrum = self.spectrum_0.copy()
 
@@ -159,7 +159,7 @@ class Molecule:
             self.T_of_M = T_of_M
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a dictionary including everything needed to recreate self"""
+        """Return a dictionary including everything needed to recreate self."""
 
         def should_serialize(attribute: Attribute, _: Any) -> bool:  # type: ignore
             """Filter attributes that should not be serialized.
@@ -173,11 +173,11 @@ class Molecule:
 
     @cached_property
     def norm_spectrum(self) -> MASS_TO_FLOAT:
-        """Normalized version of self.spectrum"""
+        """Normalized version of self.spectrum."""
         return self.calc_norm_spectrum()
 
     def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
-        """Save the `as_dict` form of the molecule to a .json file
+        """Save the `as_dict` form of the molecule to a .json file.
 
         Args:
             mol_dir: Path to directory to save molecule in, defaults to
@@ -196,7 +196,7 @@ class Molecule:
     def load(
         cls, file_name: str, mol_dir: Optional[PATH_OR_STR] = None, **kwargs: Any
     ) -> "Molecule":
-        """Loads a molecule object from a .json file
+        """Loads a molecule object from a .json file.
 
         Args:
             file_name: Name of the .json file WITHOUT the ".json" extension
@@ -223,7 +223,7 @@ class Molecule:
         return cls(**self_as_dict)
 
     def update(self, **kwargs: Any) -> None:
-        """Set attributes given as kwargs, but update rather than replacing dicts"""
+        """Set attributes given as kwargs, but update rather than replacing dicts."""
         for key, value in kwargs.items():
             if isinstance(value, dict):
                 try:
@@ -235,17 +235,17 @@ class Molecule:
 
     @property
     def eta(self) -> Optional[float]:
-        """Pseudonym for 'dynamic_viscosity' in [Pa*s]"""
+        """Pseudonym for 'dynamic_viscosity' in [Pa*s]."""
         return self.dynamic_viscosity
 
     @property
     def s(self) -> Optional[float]:
-        """Pseudonym for 'molecular_diameter' in [m]"""
+        """Pseudonym for 'molecular_diameter' in [m]."""
         return self.molecule_diameter
 
     @property
     def m(self) -> float:
-        """The molecule mass in [kg]"""
+        """The molecule mass in [kg]."""
         M = self.M
         m = M * 1e-3 / AVOGADRO_CONSTANT  # from g/mol to kg
         return m
@@ -263,7 +263,7 @@ class Molecule:
             return masses[index]
 
     def calc_sigma(self, E_ion: Optional[int] = None) -> float:
-        """Return the ionization cross-section [A^2] given the ionization energy [eV]
+        """Return the ionization cross-section [A^2] given the ionization energy [eV].
 
         Checks if E_ion (e.g. 80) is in the keys of self.sigma (e.g. {70:1.5, 100:4.5}),
         returns self.sigma[E_ion] if it is and otherwise interpolates (e.g. getting 2.5)
@@ -316,7 +316,7 @@ class Molecule:
             return sigma_single
 
     def calc_norm_spectrum(self) -> MASS_TO_FLOAT:
-        """Return and set the normalized active spectrum as a dict {M:I_M}"""
+        """Return and set the normalized active spectrum as a dict {M:I_M}."""
         spectrum = self.spectrum
         total_intensity = sum(list(spectrum.values()))
         norm_spectrum = {}
@@ -330,7 +330,7 @@ class Molecule:
         T_of_M: Optional[TRANSMISSION_AMPLIFICATION_FUNCTION] = None,
         beta: Optional[float] = None,
     ) -> None:
-        """Set self.spectrum to a transmission-amplification-weighted spectrum
+        """Set self.spectrum to a transmission-amplification-weighted spectrum.
 
         Args:
             T_of_M (function): The transmission-amplification function, defaults to self.T_of_M
@@ -351,7 +351,7 @@ class Molecule:
         self.spectrum = self.calc_corr_spectrum(T_of_M=T_of_M)
 
     def set_beta(self, beta: float) -> None:
-        """Set transmission-amplification function via its exponent"""
+        """Set transmission-amplification function via its exponent."""
         self.beta = beta
 
         def T_of_M(M: float) -> float:
@@ -362,7 +362,7 @@ class Molecule:
     def calc_corr_spectrum(
         self, T_of_M: Optional[TRANSMISSION_AMPLIFICATION_FUNCTION] = None
     ) -> MASS_TO_FLOAT:
-        """Correct the spectrum by weighing by a transmission-amplification function
+        """Correct the spectrum by weighing by a transmission-amplification function.
 
         This function stores the corrected spectrum as self.corr_spectrum, doesn't touch
         self.spectrum.
@@ -399,7 +399,7 @@ class Molecule:
         ax: Union[str, "pyplot.Axes"] = "new",
         **kwargs: Any,
     ) -> "pyplot.Axes":  # pragma: no cover
-        """Plots the molecule's reference mass spectrum
+        """Plots the molecule's reference mass spectrum.
 
         Args:
             norm (bool): Whether to normalize to the sum of the peaks
@@ -438,7 +438,7 @@ class Molecule:
         return ax
 
     def get_color(self) -> str:
-        """Return the molecule's color = the EC-MS standard color of its primary mass
+        """Return the molecule's color = the EC-MS standard color of its primary mass.
 
         Standard colors are stored in `constants.STANDARD_COLORS`
 
@@ -449,7 +449,7 @@ class Molecule:
         return STANDARD_COLORS.get(primary, "k")
 
     def get_T_of_M(self) -> TRANSMISSION_AMPLIFICATION_FUNCTION:
-        """Return the active transmission-amplification function"""
+        """Return the active transmission-amplification function."""
         if hasattr(self, "T_of_M") and self.T_of_M is not None:
             return self.T_of_M
         elif hasattr(self, "beta") and self.beta is not None:
@@ -464,7 +464,7 @@ class Molecule:
             )
 
     def calc_Hcp(self, T: Optional[float]) -> float:  # noqa: C901
-        """Returns the solubility Henry's-Law constant in Sanders units: [(mol/l) / bar]
+        """Returns the solubility Henry's-Law constant in Sanders units: [(mol/l) / bar].
 
         Solubility is also called concentration/pressure (cp), thus the cp in Hcp.
         To get volatility (pc) in SI units: Take the reciprocal and multiply by 100, or use
@@ -529,7 +529,7 @@ class Molecule:
         return H
 
     def calc_KH(self, T: Optional[float] = None) -> float:
-        """Return the volatility Henry's-Law constant in SI units [Pa/[mol/m^3]]
+        """Return the volatility Henry's-Law constant in SI units [Pa/[mol/m^3]].
 
         T will default to ``self.medium.T`` if not given
 
@@ -545,7 +545,7 @@ class Molecule:
         p: Optional[float] = None,
         T: Optional[float] = None,
     ) -> float:
-        """Return the molecule's mass-transfer number in [m^3/s]
+        """Return the molecule's mass-transfer number in [m^3/s].
 
         Args:
             n_dot_0 (float): The total flux through the capillary of the chip in [mol/s]
@@ -567,7 +567,7 @@ class Molecule:
         return H
 
     def calc_p_vap(self, T: Optional[float] = None) -> float:
-        """Return the vapor pressure of the molecule in [Pa] given temperature in [K]
+        """Return the vapor pressure of the molecule in [Pa] given temperature in [K].
 
         T defaults to ``self.medium.T`` if not given
 
@@ -594,7 +594,7 @@ class Molecule:
 
     @property
     def pKa(self) -> float:
-        """Return the pKa above or below which (see pKa_description) self is volatile"""
+        """Return the pKa above or below which (see pKa_description) self is volatile."""
         pKa, description = PKAS.get(self.name, (None, None))
         if self.verbose:
             if pKa:
@@ -605,12 +605,12 @@ class Molecule:
 
     @property
     def pKa_description(self) -> str:
-        """Return str specifying whether the volatile compound is at pH below or above pKa"""
+        """Return str specifying whether the volatile compound is at pH below or above pKa."""
         pKa, description = PKAS.get(self.name, (None, None))
         return description
 
     def calc_volatile_portion(self, pH: float) -> float:
-        """Return the fraction in the volatile form of mol as a function of pH"""
+        """Return the fraction in the volatile form of mol as a function of pH."""
         pKa, description = PKAS.get(self.name, (None, None))
         HA_to_A_ratio = cast(float, np.power(10, pKa - pH))
         portion_HA = HA_to_A_ratio / (1 + HA_to_A_ratio)

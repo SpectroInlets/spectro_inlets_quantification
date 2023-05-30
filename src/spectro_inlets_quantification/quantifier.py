@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Outer level run-time module
+"""Outer level run-time module.
 
 This is the master module for quantification. It uses the sensitivity factors in the
 `SensitivityMatrix` of a calibration, as well as the capillary function and gas properties
@@ -31,7 +31,7 @@ CONFIG = Config()
 
 
 class Quantifier:
-    """Class for quantifying signals to fluxes or concentrations"""
+    """Class for quantifying signals to fluxes or concentrations."""
 
     def __init__(
         self,
@@ -50,7 +50,7 @@ class Quantifier:
         relaxed: List[MOL] = None,
         verbose: bool = True,
     ) -> None:
-        """Create a Quantifier object given its properties
+        """Create a Quantifier object given its properties.
 
         Args:
             calibration (Calibration): The calibration, if already loaded
@@ -128,7 +128,7 @@ class Quantifier:
         self.verbose = verbose
 
     def __eq__(self, other: object) -> bool:
-        """Return whether a quantifier is equal to another"""
+        """Return whether a quantifier is equal to another."""
         if not isinstance(other, self.__class__):
             return False
         if len(self.sm_list) != len(other.sm_list):
@@ -146,7 +146,7 @@ class Quantifier:
         carrier: MIXTURE_LIKE,
         calibration_file: str,
     ) -> "Quantifier":
-        """Create object from dictionary containing the object state
+        """Create object from dictionary containing the object state.
 
         Args:
             obj_as_dict (dict): The dict representation of the object, as returned by
@@ -183,7 +183,7 @@ class Quantifier:
 
     # FIXME Any type used here until the to_dict stuff is properly reworked
     def to_dict(self) -> Dict[str, Any]:
-        """Return the object state as a dictionary
+        """Return the object state as a dictionary.
 
         TODO: This is only a partial implementation, saving the most pertinent information
         items, but leaving a few out which will need to be re-supplied when re-creating the
@@ -200,24 +200,24 @@ class Quantifier:
         }
 
     def make_sm(self, mol_list: MOLLIST, mass_list: MASSLIST) -> SensitivityMatrix:
-        """Shortcut to the Calibration's `make_sensitivity_matrix`"""
+        """Shortcut to the Calibration's `make_sensitivity_matrix`."""
         return self.calibration.make_sensitivity_matrix(mol_list=mol_list, mass_list=mass_list)
 
     @property
     def sm(self) -> Optional[SensitivityMatrix]:
-        """The primary `SensitivityMatrix`"""
+        """The primary `SensitivityMatrix`."""
         if self._sm_list:
             return self._sm_list[0]
         return None
 
     @property
     def sm_list(self) -> List[SensitivityMatrix]:
-        """List of `SensitivityMatrix`"""
+        """List of `SensitivityMatrix`."""
         return self._sm_list
 
     @property
     def master_mass_list(self) -> MASSLIST:
-        """Union of the mass lists of all the quantifier's sensitivity matrices"""
+        """Union of the mass lists of all the quantifier's sensitivity matrices."""
         mass_list = set()
         for sm in self.sm_list:
             for mass in sm.mass_list:
@@ -226,7 +226,7 @@ class Quantifier:
 
     @property
     def master_mol_list(self) -> MOLLIST:
-        """Union of the mol lists of all the quantifier's sensitivity matrices"""
+        """Union of the mol lists of all the quantifier's sensitivity matrices."""
         mol_list = set()
         for sm in self.sm_list:
             for mol in sm.mol_list:
@@ -235,7 +235,7 @@ class Quantifier:
 
     @property
     def master_sm(self) -> SensitivityMatrix:
-        """Union of all the quantifier's sensitivity matrices"""
+        """Union of all the quantifier's sensitivity matrices."""
         if not self._master_sm:
             self._master_sm = self.calibration.make_sensitivity_matrix(
                 mass_list=self.master_mass_list, mol_list=self.master_mol_list
@@ -244,57 +244,57 @@ class Quantifier:
 
     @property
     def mol_list(self) -> MOLLIST:
-        """Return the molecule list"""
+        """Return the molecule list."""
         return self.sm.mol_list
 
     @property
     def mass_list(self) -> MASSLIST:
-        """Return the mass list"""
+        """Return the mass list."""
         return self.sm.mass_list
 
     @property
     def carrier(self) -> Gas:
-        """Return the carrier `Gas`"""
+        """Return the carrier `Gas`."""
         return self.chip.carrier
 
     @property
     def T(self) -> float:
-        """Get/set the temperature of the `Medium`"""
+        """Get/set the temperature of the `Medium`."""
         return self.medium.T
 
     @T.setter
     def T(self, T: float) -> None:
-        """Get/set the temperature of the `Medium`"""
+        """Get/set the temperature of the `Medium`."""
         self.medium.T = T
 
     @property
     def p(self) -> float:
-        """Get/set the pressure of the `Medium`"""
+        """Get/set the pressure of the `Medium`."""
         return self.medium.p
 
     @p.setter
     def p(self, p: float) -> None:
-        """Get/set the pressure of the `Medium`"""
+        """Get/set the pressure of the `Medium`."""
         self.medium.p = p
 
     @property
     def p_vac(self) -> float:
-        """Get/set the vacuum pressure of the `Medium`"""
+        """Get/set the vacuum pressure of the `Medium`."""
         return self.medium.p_vac
 
     @p_vac.setter
     def p_vac(self, p_vac: float) -> None:
-        """Get/set the vacuum pressure of the `Medium`"""
+        """Get/set the vacuum pressure of the `Medium`."""
         self.medium.p_vac = p_vac
 
     # ---- methods for calculating flux ------ #
 
     def print_sensitivity_matrices(self) -> None:
-        """Print the sensitivity matrices"""
+        """Print the sensitivity matrices."""
         print(self.prints_sensitivity_matrices())
 
     def prints_sensitivity_matrices(self) -> str:
-        """Format all information about the sensitivity matrices and return as a string"""
+        """Format all information about the sensitivity matrices and return as a string."""
         out = "Quantifier got these sensitivity matrices:"
         for i, sm in enumerate(self.sm_list):
             out += f"\nsm # {i}:"
@@ -366,7 +366,7 @@ class Quantifier:
         sequence: Optional[List[int]] = None,
         mode: Optional[str] = None,
     ) -> MOL_TO_FLOAT:
-        """Calculate the concentration [mol/m^3] for each quantified molecule
+        """Calculate the concentration [mol/m^3] for each quantified molecule.
 
         Args:
             signals (dict or SignalDict): ``{mass: S_M}``, where ``S_M`` is the signal in [A]
@@ -399,7 +399,7 @@ class Quantifier:
         sequence: Optional[List[int]] = None,
         mode: str = None,
     ) -> MOL_TO_FLOAT:
-        """Calculate the concentration [mol/m^3] for each quantified molecule
+        """Calculate the concentration [mol/m^3] for each quantified molecule.
 
         Args:
             signals (dict or SignalDict): {mass: S_M}, where S_M is the signal in [A]

@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""This defines the Mixture and Gas classes
+"""This defines the Mixture and Gas classes.
 
 These classes are general tools for dealing with Mixtures
 
@@ -36,7 +36,7 @@ class Mixture:
         medium: Optional[Medium] = None,
         verbose: bool = False,
     ) -> None:
-        """Initiate a mixture given its composition dictionary and name
+        """Initiate a mixture given its composition dictionary and name.
 
         Mixture can get its p and T from self.medium, if medium is given
 
@@ -59,7 +59,7 @@ class Mixture:
         name: Optional[str] = None,
         verbose: bool = False,
     ) -> T:
-        """Return a Mixture object based on mix
+        """Return a Mixture object based on mix.
 
         Args:
             mix (dict or str or `Molecule` or `Mixture`): If a dict, it has to be of the
@@ -105,7 +105,7 @@ class Mixture:
                 return cls(comp=comp, name=name)
 
     def __getattr__(self, attr: str) -> float:
-        """Unimplemented attributes are weighted average of the Molecule attribute"""
+        """Unimplemented attributes are weighted average of the Molecule attribute."""
         if "should_not_exist" in attr:
             # Ipython sometimes invokes self._ipython_canary_method_should_not_exist
             # No idea why, but presumably it should raise AttributeError.
@@ -113,35 +113,35 @@ class Mixture:
         return self.calc_weighted_average(attr)
 
     def __getitem__(self, key: str) -> Tuple[float, Molecule]:
-        """Indexing returns tuple of (fraction, Molecule) for mixture component"""
+        """Indexing returns tuple of (fraction, Molecule) for mixture component."""
         return self.comp[key], self.mdict.get(key)
 
     def __repr__(self) -> str:
-        """Return repr string of this object"""
+        """Return repr string of this object."""
         return f"{self.__class__}({self.name})"
 
     def __len__(self) -> int:
-        """Return length (of self.comp)"""
+        """Return length (of self.comp)."""
         return len(self.comp)
 
     def components(self) -> Generator[Tuple[float, Molecule], None, None]:
-        """Iterate over (fraction, molecule) for the components of the mixture"""
+        """Iterate over (fraction, molecule) for the components of the mixture."""
         for mol, fraction in self.comp.items():
             yield fraction, self.mdict.get(mol)
 
     def update(self, comp: COMPOSITION) -> None:
-        """Update the mixture with a new composition dictionary"""
+        """Update the mixture with a new composition dictionary."""
         self.comp.update(comp)
 
     @property
     def mol_list(self) -> List[str]:
-        """Return the molecule list"""
+        """Return the molecule list."""
         return list(self.comp.keys())
 
     # T and p can be accessed by the medium, if medium is given
     @property
     def T(self) -> float:
-        """Shortcut to Mixture.medium.T. Cannot be set in Mixture"""
+        """Shortcut to Mixture.medium.T. Cannot be set in Mixture."""
         return self.medium.T
 
     @property
@@ -152,7 +152,7 @@ class Mixture:
     # -------- methods which calculate values from the Mixture --------- #
 
     def calc_weighted_average(self, attr: str) -> float:
-        """Estimate a property of a gas as a weighted average of its components
+        """Estimate a property of a gas as a weighted average of its components.
 
         Molecules without attr are ignored from the average, and if they add up to more
         than 1% of the composition a warning is printed.
@@ -184,7 +184,7 @@ class Mixture:
 
 
 class Gas(Mixture):
-    """Adds gas-specific methods and attributes to Mixture"""
+    """Adds gas-specific methods and attributes to Mixture."""
 
     def saturated_with(
         self,
@@ -192,7 +192,7 @@ class Gas(Mixture):
         p: Optional[float] = None,
         T: Optional[float] = None,
     ) -> "Gas":
-        """Return a mixture like self but with the solvent vapor pressure
+        """Return a mixture like self but with the solvent vapor pressure.
 
         If p and T are not given, they come from self.medium. Unless the present gas has
         no medium, in which case p and T are standard conditions.
@@ -242,7 +242,7 @@ class Gas(Mixture):
 
     @property
     def dynamic_viscosity(self) -> float:
-        """The dynamic viscosity in [Pa*s]. Calculated according to Davidson1993
+        """The dynamic viscosity in [Pa*s]. Calculated according to Davidson1993.
 
         Davidson, T A. A simple and accurate method for calculating viscosity of gaseous
         mixtures. United States: N. p., 1993. Web.
@@ -306,10 +306,10 @@ class Gas(Mixture):
 
     @property
     def eta(self) -> float:
-        """Pseudonymn for dynamic_viscosity in [Pa*s]"""
+        """Pseudonymn for dynamic_viscosity in [Pa*s]."""
         return self.dynamic_viscosity
 
     @property
     def partial_pressures(self) -> Dict[str, float]:
-        """The partial pressures of the gas's components in [Pa]"""
+        """The partial pressures of the gas's components in [Pa]."""
         return {mol: self.p * x_i for mol, x_i in self.comp.items()}

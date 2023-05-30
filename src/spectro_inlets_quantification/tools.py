@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Misc tools
+"""Misc tools.
 
 This module contains tools for:
 * Matching mass labels
@@ -26,7 +26,7 @@ M_MATCH = "^M([0-9]+)([-]{1}.*)?$"
 
 
 def mass_to_M(mass: str) -> float:
-    """Return the m/z value as a float (44.0) given the mass as a str ("M44-CEM")
+    """Return the m/z value as a float (44.0) given the mass as a str ("M44-CEM").
 
     Raises:
         ValueError: If mass doesn't adhere to the approved form of either "M44" or "M44-???" where
@@ -41,7 +41,7 @@ def mass_to_M(mass: str) -> float:
 
 
 def mass_to_pure_mass(mass: str) -> str:
-    """Return just the m/z-specifying mass ("M44") given the full mass ("M44-CEM")
+    """Return just the m/z-specifying mass ("M44") given the full mass ("M44-CEM").
 
     Raises:
         ValueError: If mass doesn't adhere to the approved form of either "M44" or "M44-???" where
@@ -56,7 +56,7 @@ def mass_to_pure_mass(mass: str) -> str:
 
 
 def mass_to_setting(mass: str) -> str:
-    """Return just the mass spectrometer settings name ("CEM") given the full mass ("M44-CEM")"""
+    """Return just the mass spectrometer settings name ("CEM") given the full mass ("M44-CEM")."""
     match = re.match(M_MATCH, mass)
     if match:
         if len(match.groups()) > 1 and match.group(2) is not None:
@@ -67,7 +67,7 @@ def mass_to_setting(mass: str) -> str:
 
 
 def tstamp_to_date(tstamp: float) -> str:
-    """Return the date (str) in special compact form ``yyMdd`` format given the unix time (float)
+    """Return the date (str) in special compact form ``yyMdd`` format given the unix time (float).
 
     In this format the month is given as a capital letter, starting with A for January. E.g. June
     4th, 2022 will become 22G04.
@@ -86,26 +86,26 @@ TODAY = tstamp_to_date(time.time())
 
 
 def make_axis() -> Tuple["pyplot.Figure", "pyplot.Axes"]:
-    """Make and return a matplotlib.pyplot (figure, axis) pair"""
+    """Make and return a matplotlib.pyplot (figure, axis) pair."""
     from matplotlib import pyplot  # noqa
 
     return pyplot.subplots()
 
 
 class Singleton(type):
-    """A singleton metaclass"""
+    """A singleton metaclass."""
 
     _instances: Dict["Singleton", type] = {}
 
     def __call__(cls, *args: Any, **kwargs: Any) -> type:
-        """Return new object on first call or existing object on subsequent calls"""
+        """Return new object on first call or existing object on subsequent calls."""
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
 
 def dict_equal_with_close_floats(dict1: Dict[Any, Any], dict2: Dict[Any, Any]) -> bool:
-    """Return whether the two dicts are equal, but allow for floats to be only close"""
+    """Return whether the two dicts are equal, but allow for floats to be only close."""
     if dict1.keys() != dict2.keys():
         return False
 

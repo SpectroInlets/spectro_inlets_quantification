@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Defines the Medium class
+"""Defines the Medium class.
 
 Medium, unlike the classes of .mixture, is conscious of temperature and pressure
 
@@ -19,7 +19,7 @@ MOLECULE_TO_CONCENTRATION = Dict[str, float]
 
 
 class Medium(metaclass=Singleton):
-    """The liquid on the chip
+    """The liquid on the chip.
 
     Defines p, T, mixture and concentration for the medium for all of spectro_inlets_quantification
 
@@ -63,7 +63,7 @@ class Medium(metaclass=Singleton):
         self.c = c
 
     def __repr__(self) -> str:
-        """Return repr string of this object"""
+        """Return repr string of this object."""
         return (
             f"{self.__class__.__name__}(p={self.p}, T={self.T}, p_vac={self.p_vac}, "
             f"mixture={self.mixture}, c={self.c})"
@@ -71,10 +71,10 @@ class Medium(metaclass=Singleton):
 
     @property
     def mdict(self) -> "MoleculeDict":
-        """Return the molecule dict"""
+        """Return the molecule dict."""
         return self.mixture.mdict  # the one-and-only MoleculeDict
 
     @property
     def comp(self) -> "COMPOSITION":
-        """Return the composition"""
+        """Return the composition."""
         return self.mixture.comp  # the one-and-only relevant composition

@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Collection of all relevant constants, to avoid duplicating information"""
+"""Collection of all relevant constants, to avoid duplicating information."""
 
 # --------- natural constants ------------- #
 #: Boltzman constant in [J/K]

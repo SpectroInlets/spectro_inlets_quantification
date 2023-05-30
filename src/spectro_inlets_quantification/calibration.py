@@ -1,6 +1,6 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
-"""Master module for handling results of calibration experiment
+"""Master module for handling results of calibration experiment.
 
 Classes here inherit from classes in sensitivity.
 
@@ -39,7 +39,7 @@ CONFIG = Config()
 
 @attr.s
 class CalPoint(SensitivityFactor):
-    """Represents one result of a calibration experiment
+    """Represents one result of a calibration experiment.
 
     Attributes inherited from SensitivityFactor:
 
@@ -77,7 +77,7 @@ class CalPoint(SensitivityFactor):
     external_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
 
     def as_dict(self) -> Dict[str, Union[float, str, Dict[str, JSONVALUE]]]:
-        """Return the dictionary representation of the CalPoint"""
+        """Return the dictionary representation of the CalPoint."""
         self_as_dict = cast(
             Dict[str, Union[float, str, Dict[str, JSONVALUE]]],
             super().as_dict(),
@@ -95,7 +95,7 @@ class CalPoint(SensitivityFactor):
         return self_as_dict
 
     def copy(self) -> "CalPoint":
-        """Return a new CalPoint cloning self"""
+        """Return a new CalPoint cloning self."""
         self_as_dict = self.as_dict()
         for key, value in self_as_dict.items():
             if isinstance(value, dict):
@@ -103,7 +103,7 @@ class CalPoint(SensitivityFactor):
         return CalPoint(**self_as_dict)  # type: ignore
 
     def calc_detection_limit(self, quantity: str = "c", chip: Chip = None) -> float:
-        """Return the D.L. in [mol/s] (quantity='n_dot'), [Pa] ('p'), or [mM] ('c')
+        """Return the D.L. in [mol/s] (quantity='n_dot'), [Pa] ('p'), or [mM] ('c').
 
         If quantity is 'p' or 'c', then it needs a chip with the right T, p, and carrier
         """
@@ -126,7 +126,7 @@ class CalPoint(SensitivityFactor):
 
 
 class Calibration(SensitivityList):
-    """Class for saving and loading measured sensitivity factors
+    """Class for saving and loading measured sensitivity factors.
 
     Dev time usage is to directly initiate a calibration with a list of CalPoints
     (cal_list argument to __init__()) and then save it (save())
@@ -151,7 +151,7 @@ class Calibration(SensitivityList):
         mdict: Optional[MoleculeDict] = None,
         **kwargs: Any,  # extra stuff, such as external settings during calibration
     ):
-        """Create a Calibration object given its properties
+        """Create a Calibration object given its properties.
 
         Should only be called directly for a brand-new calibration, with a cal_list as
         the main data-containing input.
@@ -218,7 +218,7 @@ class Calibration(SensitivityList):
         self.extra_stuff = kwargs
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a dictionary including everything needed to recreate self"""
+        """Return a dictionary including everything needed to recreate self."""
         cal_dicts = [cal.as_dict() for cal in self.cal_list]
         # calibration basics:
         self_as_dict = cast(
@@ -237,7 +237,7 @@ class Calibration(SensitivityList):
         return self_as_dict
 
     def save(self, file_name: str = None, cal_dir: PATHLIKE = None) -> None:
-        """Save the `as_dict` form of the calibration to a .json file
+        """Save the `as_dict` form of the calibration to a .json file.
 
         Args:
             file_name (str): Name of file to save in, must end in .json
@@ -262,7 +262,7 @@ class Calibration(SensitivityList):
 
     @classmethod
     def load(cls, file_name: PATHLIKE, cal_dir: PATHLIKE = None, **kwargs: Any) -> "Calibration":
-        """Loads a calibration object from a .json file
+        """Loads a calibration object from a .json file.
 
         Args:
             file_name: Name of the calibration file
@@ -295,22 +295,22 @@ class Calibration(SensitivityList):
 
     @property
     def cal_list(self) -> List[SensitivityFactor]:
-        """``cal_list`` is a pseudonymn for ``sf_list`` (parent class jargon)"""
+        """``cal_list`` is a pseudonymn for ``sf_list`` (parent class jargon)."""
         return self.sf_list
 
     @cal_list.setter
     def cal_list(self, cal_list: List[SensitivityFactor]) -> None:
-        """``cal_list`` is a pseudonymn for ``sf_list`` (parent class jargon)"""
+        """``cal_list`` is a pseudonymn for ``sf_list`` (parent class jargon)."""
         self.sf_list = cal_list
 
     @property
     def mol_list(self) -> MOLLIST:
-        """The mol list of a calibration is all molecules for which it has a `CalPoint`"""
+        """The mol list of a calibration is all molecules for which it has a `CalPoint`."""
         return list({cal.mol for cal in self})
 
     @property
     def mass_list(self) -> MASSLIST:
-        """The mass list of a calibration is all masses for which it has a `CalPoint`"""
+        """The mass list of a calibration is all masses for which it has a `CalPoint`."""
         return list({cal.mass for cal in self})
 
     # Note, __add__ and filter are in SensitivityList, but need to be modified to
@@ -318,7 +318,7 @@ class Calibration(SensitivityList):
     # as is.
 
     def __add__(self, other: "Calibration") -> "Calibration":  # type: ignore
-        """Adding another calibration just appends to the `cal_list`"""
+        """Adding another calibration just appends to the `cal_list`."""
         cal_list = self.cal_list + other.cal_list
         self_as_dict = self.as_dict()
         self_as_dict.pop("cal_dicts")
@@ -326,7 +326,7 @@ class Calibration(SensitivityList):
         return Calibration(**self_as_dict)
 
     def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "Calibration":  # noqa: A003
-        """See `SensitivityList.filter`. Calibration's implementation retains metadata"""
+        """See `SensitivityList.filter`. Calibration's implementation retains metadata."""
         cal_list = SensitivityList.filter(self, **kwargs).sf_list
         self_as_dict = self.as_dict()
         self_as_dict.pop("cal_dicts")
@@ -334,7 +334,7 @@ class Calibration(SensitivityList):
         return Calibration(**self_as_dict)
 
     def get(self, mol: str, mass: str) -> Optional[Union[CalPoint, SensitivityUnion]]:
-        """Return the `CalPoint` (1) or `SensitivityUnion` (>1) with cals of mol at mass"""
+        """Return the `CalPoint` (1) or `SensitivityUnion` (>1) with cals of mol at mass."""
         cal_list = self.filter(mol=mol, mass=mass).cal_list
         if len(cal_list) == 1:
             return cast(CalPoint, cal_list[0])
@@ -347,37 +347,37 @@ class Calibration(SensitivityList):
 
     @property
     def setting_list(self) -> List[str]:
-        """Return the ``settings`` for each `CalPoint` in this object"""
+        """Return the ``settings`` for each `CalPoint` in this object."""
         return list({cal.setting for cal in self})
 
     def make_fit(self, setting: str) -> SensitivityFit:
-        """Make a `SensitivityFit` for the CalPoints with a particular mass setting"""
+        """Make a `SensitivityFit` for the CalPoints with a particular mass setting."""
         fit_spec = self.fit_specs.get(setting, {}) if self.fit_specs else {}
         fit = SensitivityFit(self, setting=setting, **fit_spec)  # type: ignore
         self._fits[setting] = fit
         return fit
 
     def make_fits(self) -> None:
-        """Make a `SensitivityFit` for the CalPoints for each mass setting"""
+        """Make a `SensitivityFit` for the CalPoints for each mass setting."""
         for setting in self.setting_list:
             self.make_fit(setting)
 
     def get_fit(self, setting: str) -> SensitivityFit:
-        """Return the cached or newly made fit at `setting`"""
+        """Return the cached or newly made fit at `setting`."""
         if setting in self._fits:
             return self._fits[setting]
         return self.make_fit(setting)
 
     @property
     def default_fit(self) -> SensitivityFit:
-        """The fit at the default setting of the calibration"""
+        """The fit at the default setting of the calibration."""
         return self.get_fit(self.default_setting)
 
     @property
     def fit(
         calibration,
     ) -> Union["_MyMultiSettingFit", SensitivityFit]:
-        """Return an object whose functions choose which fit to use based on setting"""
+        """Return an object whose functions choose which fit to use based on setting."""
         setting_list = calibration.setting_list
         if len(setting_list) == 1:
             return calibration.get_fit(setting_list[0])
@@ -387,14 +387,14 @@ class Calibration(SensitivityList):
     # ---- methods whose primary purpose is interface with quant.Molecule ---- #
 
     def __getitem__(self, key: MOL) -> Molecule:  # type: ignore
-        """Indexing a `Calibration` looks up a molecule in ``calibration.mdict``"""
+        """Indexing a `Calibration` looks up a molecule in ``calibration.mdict``."""
         try:
             return cast(Molecule, self.mdict[key])
         except KeyError:
             raise KeyError(f"self.mdict has no key '{key}'. Try self.molecule('{key}').")
 
     def molecule(self, mol: MOL) -> Molecule:
-        """Return a `Molecule` instance, calibrated if possible
+        """Return a `Molecule` instance, calibrated if possible.
 
         dev-time only
 
@@ -408,7 +408,7 @@ class Calibration(SensitivityList):
             return self.mdict.get(mol)
 
     def initiate_mdict(self, mdict: Optional[MoleculeDict] = None) -> MoleculeDict:
-        """Populate ``self.mdict`` based on ``self.cal_list``
+        """Populate ``self.mdict`` based on ``self.cal_list``.
 
         This function is how `Calibration.__init__` loads its molecules and adds
         saved information into them. It can also be used to add more molecules or
@@ -497,7 +497,7 @@ class Calibration(SensitivityList):
         cal_dir: PATHLIKE = None,
         **kwargs: Any,
     ) -> SensitivityMatrix:
-        """Load the calibration and immediately make a sensitivity matrix with it
+        """Load the calibration and immediately make a sensitivity matrix with it.
 
         Args:
             file_name (str or Path): Name of the calibration file.
@@ -515,22 +515,22 @@ class Calibration(SensitivityList):
     # ------ methods for visualizing and sanity-checking the calibration ------- #
 
     def fit_F_vs_f(self, setting: str = None) -> None:
-        """Shortcut to the fit_F_vs_f of the calibration's `SensitivityFit` at ``setting``"""
+        """Shortcut to the fit_F_vs_f of the calibration's `SensitivityFit` at ``setting``."""
         fit = self.get_fit(setting=setting or self.default_setting)
         return fit.fit()
 
     def plot_F_vs_f(self, setting: str = None, **kwargs: Any) -> "pyplot.Axes":
-        """Shortcut to the plot_F_vs_f of the calibration's `SensitivityFit` at ``setting``"""
+        """Shortcut to the plot_F_vs_f of the calibration's `SensitivityFit` at ``setting``."""
         fit = self.get_fit(setting=setting or self.default_setting)
         return fit.plot_F_vs_f(**kwargs)
 
     def fit_all(self) -> None:
-        """Fit F vs f for each setting in the calibration"""
+        """Fit F vs f for each setting in the calibration."""
         for setting in self.setting_list:
             self.fit_F_vs_f(setting=setting)
 
     def plot_all(self, **kwargs: Any) -> Dict[str, "pyplot.Axes"]:
-        """Plot F vs f for each setting in the calibration"""
+        """Plot F vs f for each setting in the calibration."""
         axes = {}
         for setting in self.setting_list:
             ax = self.plot_F_vs_f(setting=setting, **kwargs)
@@ -661,7 +661,7 @@ class Calibration(SensitivityList):
         return "".join(report_lines)
 
     def print_report(self, *args: Any, **kwargs: Any) -> None:
-        """Print the report generated by `prints_report` to the terminal"""
+        """Print the report generated by `prints_report` to the terminal."""
         print(self.prints_report(*args, **kwargs))
 
 
