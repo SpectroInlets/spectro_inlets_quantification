@@ -20,7 +20,7 @@ Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 
 """
-import json
+import yaml
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
@@ -178,29 +178,29 @@ class Molecule:
         return self.calc_norm_spectrum()
 
     def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
-        """Save the `as_dict` form of the molecule to a .json file.
+        """Save the `as_dict` form of the molecule to a yaml file.
 
         Args:
             mol_dir: Path to directory to save molecule in, defaults to
                 :attr:`Config.molecule_directory`
-            file_name: Name of the .json file, including the file extension ".json"
+            file_name: Name of the yaml file, including the file extension ".yml"
         """
         mol_dir = mol_dir or CONFIG.molecule_directory
         if file_name is None:
-            file_name = self.name + ".json"
-        path_to_json = Path(mol_dir) / file_name
+            file_name = self.name + ".yml"
+        path_to_yaml = Path(mol_dir) / file_name
         self_as_dict = self.as_dict()
-        with open(path_to_json, "w") as json_file:
-            json.dump(self_as_dict, json_file, indent=4)
+        with open(path_to_yaml, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod
     def load(
         cls, file_name: str, mol_dir: Optional[PATH_OR_STR] = None, **kwargs: Any
     ) -> "Molecule":
-        """Loads a molecule object from a .json file.
+        """Loads a molecule object from a yaml file.
 
         Args:
-            file_name: Name of the .json file WITHOUT the ".json" extension
+            file_name: Name of the yaml file WITHOUT the ".yml" extension
             mol_dir: Path to directory to save molecule in, defaults to
                 :attr:`Config.molecule_directory`
             kwargs: (other) key word arguments are fed to Molecule.__init__()
@@ -208,12 +208,23 @@ class Molecule:
         Returns:
             Molecule: a Molecule object ready to inform your calculations!
         """
-        mol_dir = mol_dir or CONFIG.molecule_directory
-        path_to_json = Path(mol_dir) / (file_name + ".json")
-        with open(path_to_json) as json_file:
-            self_as_dict = json.load(json_file)
+        self_as_dict = {}
+        for mol_dir in [CONFIG.molecule_directory, CONFIG.aux_molecule_directory]:
+            if not mol_dir:
+                continue
+            path_to_yaml = Path(mol_dir) / (file_name + ".yml")
+            try:
+                with open(path_to_yaml) as yaml_file:
+                    self_as_dict = yaml.safe_load(yaml_file)
+            except FileNotFoundError as e:
+                continue
+            else:
+                break
+        else:
+            raise FileNotFoundError(f"No molecule found for file_name={file_name}")
+
         self_as_dict.update(kwargs)
-        # Unfortunately, saving and loading a dict with integer keys to json
+        # Unfortunately, saving and loading a dict with integer keys to yaml
         # turns the keys into strings. This fixes that:
         try:
             self_as_dict["sigma"] = {
