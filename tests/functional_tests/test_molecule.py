@@ -2,7 +2,7 @@
 
 """Functional tests for molecule"""
 
-from json import load
+import yaml
 
 from pytest import approx, mark
 
@@ -22,8 +22,8 @@ print(MOL_NAMES)
 def test_load(mol_name):
     """Test the load method"""
     # Read the raw data
-    with open(CFG.molecule_directory / f"{mol_name}.json") as f_:
-        raw_data = load(f_)
+    with open(CFG.molecule_directory / f"{mol_name}.yml") as f_:
+        raw_data = yaml.safe_load(f_)
 
     # Sigma needs to have its keys converted back to int, because JSON converts them to strings
     if "sigma" in raw_data:

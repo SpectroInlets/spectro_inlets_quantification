@@ -80,7 +80,7 @@ class TestMoleculeDict:
     def test_save(self, mock_open, mol_dir, file_name, molecule):
         """Test save"""
         mol_dir = mol_dir or CONFIG.molecule_directory
-        file_name = file_name or molecule.name + ".json"
+        file_name = file_name or molecule.name + ".yml"
         save_path = Path(mol_dir) / file_name
         with patch.object(molecule, "as_dict") as mock_as_dict:
             mock_as_dict.return_value = {"a": 47}
@@ -90,4 +90,4 @@ class TestMoleculeDict:
             handle = mock_open()
 
             out = "".join(c[0][0] for c in handle.write.call_args_list)
-            assert out == '{\n    "a": 47\n}'
+            assert out == 'a: 47\n'
