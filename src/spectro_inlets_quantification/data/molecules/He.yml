@@ -25,7 +25,7 @@ primary: M4  # default mass to measure at
 
 # from https://webbook.nist.gov/chemistry/form-ser/
 sigma:  # [Ang^2]
-  '100': 0.37
+  100: 0.37
 
 # from https://webbook.nist.gov/chemistry/form-ser/
 spectrum:

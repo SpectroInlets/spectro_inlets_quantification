@@ -180,12 +180,15 @@ class Molecule:
     def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
         """Save the `as_dict` form of the molecule to a yaml file.
 
+        Saves in `CONFIG.aux_data_directory / "molecules"` by default. This is the
+        user's quant data library (as opposed to the included library).
+
         Args:
             mol_dir: Path to directory to save molecule in, defaults to
                 :attr:`Config.molecule_directory`
             file_name: Name of the yaml file, including the file extension ".yml"
         """
-        mol_dir = mol_dir or CONFIG.molecule_directory
+        mol_dir = mol_dir or CONFIG.molecule_directories[0]
         if file_name is None:
             file_name = self.name + ".yml"
         path_to_yaml = Path(mol_dir) / file_name
@@ -208,15 +211,12 @@ class Molecule:
         Returns:
             Molecule: a Molecule object ready to inform your calculations!
         """
-        self_as_dict = {}
-        for mol_dir in [CONFIG.molecule_directory, CONFIG.aux_molecule_directory]:
-            if not mol_dir:
-                continue
+        for mol_dir in CONFIG.molecule_directories:
             path_to_yaml = Path(mol_dir) / (file_name + ".yml")
             try:
                 with open(path_to_yaml) as yaml_file:
                     self_as_dict = yaml.safe_load(yaml_file)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 continue
             else:
                 break
@@ -224,14 +224,6 @@ class Molecule:
             raise FileNotFoundError(f"No molecule found for file_name={file_name}")
 
         self_as_dict.update(kwargs)
-        # Unfortunately, saving and loading a dict with integer keys to yaml
-        # turns the keys into strings. This fixes that:
-        try:
-            self_as_dict["sigma"] = {
-                int(key): value for key, value in self_as_dict["sigma"].items()
-            }
-        except AttributeError:
-            print(f"Warning!!! {file_name} has sigma={self_as_dict['sigma']}.")
         return cls(**self_as_dict)
 
     def update(self, **kwargs: Any) -> None:

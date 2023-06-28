@@ -123,10 +123,17 @@ class Chip:
         Returns:
             Chip: a Chip object ready to calculate your capillary flux!
         """
-        chip_dir = chip_dir or CONFIG.chip_directory
-        path_to_json = (Path(chip_dir) / file_name).with_suffix(".json")
-        with open(path_to_json) as json_file:
-            self_as_dict = json.load(json_file)
+        for chip_dir in CONFIG.chip_directories:
+            path_to_json = (Path(chip_dir) / file_name).with_suffix(".json")
+            try:
+                with open(path_to_json) as json_file:
+                    self_as_dict = json.load(json_file)
+            except FileNotFoundError:
+                continue
+            else:
+                break
+        else:
+            raise FileNotFoundError(f"no chip file available called {file_name}")
         self_as_dict.update(kwargs)
         return cls(**self_as_dict)
 

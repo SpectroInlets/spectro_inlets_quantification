@@ -32,8 +32,8 @@ primary: M28  # default mass to measure at
 
 # from https://webbook.nist.gov/chemistry/form-ser/
 sigma:  # [Ang^2]
-  '100': 2.616
-  '70': 2.516
+  100: 2.616
+  70: 2.516
 
 # from https://webbook.nist.gov/chemistry/form-ser/
 spectrum:

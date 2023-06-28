@@ -128,8 +128,8 @@ class CalPoint(SensitivityFactor):
 class Calibration(SensitivityList):
     """Class for saving and loading measured sensitivity factors.
 
-    Dev time usage is to directly initiate a calibration with a list of CalPoints
-    (cal_list argument to __init__()) and then save it (save())
+    Dev time usage is to directly initiate a calibration with a list of CalPoint's or
+    SensitivityFactor's (cal_list argument to __init__()) and then save it (save())
     Quant time usage is to load a calibration (load()) and then use it to generate
     one or more sensitivity matrices (make_sensitivity_matrix())
     """
@@ -159,9 +159,9 @@ class Calibration(SensitivityList):
         To load an existing calibration, use `Calibration.load`.
 
         Args:
-            cal_list (list of CalPoint): The list of calibrations points (takes the
-                place of ``SensitivityList.sf_list``), each having as a minimum a mol, mass
-                and sensitivity factor in [C/mol].
+            cal_list (list of SensitivityFactors): The list of calibrations points, each
+                having as a minimum a mol, mass and sensitivity factor in [C/mol]. These
+                will most often be of the more specific type, `CalPoint`.
             name (str): The name of the calibration. By default,
                 name = f"{date}_{setup}_{detector}_{description}_{TODAY}"
             setup (str): The setup for which the calibration was made / is valid
@@ -254,7 +254,7 @@ class Calibration(SensitivityList):
                 raise ValueError("Calibration.save demands a file_name!")
             else:
                 file_name = self.name + ".json"
-        cal_dir = cal_dir or CONFIG.calibration_directory
+        cal_dir = cal_dir or CONFIG.calibration_directories[0]
         path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
         self_as_dict = self.as_dict()
         with open(path_to_file, "w") as json_file:
@@ -273,7 +273,7 @@ class Calibration(SensitivityList):
         Returns:
             Calibration: A calibration object ready to quantify your data!
         """
-        cal_dir = cal_dir or CONFIG.calibration_directory
+        cal_dir = cal_dir or CONFIG.calibration_directories[0]
         path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
         with open(path_to_file, "r") as json_file:
             self_as_dict = json.load(json_file)
@@ -316,14 +316,6 @@ class Calibration(SensitivityList):
     # Note, __add__ and filter are in SensitivityList, but need to be modified to
     # include more than the cal_list. SensitivityList.append() and __iadd__ are okay
     # as is.
-
-    def __add__(self, other: "Calibration") -> "Calibration":  # type: ignore
-        """Adding another calibration just appends to the `cal_list`."""
-        cal_list = self.cal_list + other.cal_list
-        self_as_dict = self.as_dict()
-        self_as_dict.pop("cal_dicts")
-        self_as_dict["cal_list"] = cal_list
-        return Calibration(**self_as_dict)
 
     def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "Calibration":  # noqa: A003
         """See `SensitivityList.filter`. Calibration's implementation retains metadata."""
@@ -558,7 +550,15 @@ class Calibration(SensitivityList):
 
     def scaled_by_factor(self, factor: float) -> "Calibration":
         """Return a copy of self with all sensitivity factors multiplied by factor"""
-        return scale_by_factor(self, factor)
+        new_calibration_as_dict = self.as_dict().copy()
+        cal_list = []
+        for cal in self.cal_list:
+            new_cal_as_dict = cal.as_dict()
+            new_cal_as_dict.update(F=cal.F * factor, F_type=cal.F_type + " corrected")
+            cal_list.append(CalPoint(**new_cal_as_dict))
+        new_calibration_as_dict["cal_list"] = cal_list
+        calibration = Calibration(**new_calibration_as_dict)
+        return calibration
 
     # ------ methods for visualizing and sanity-checking the calibration ------- #
 
@@ -728,20 +728,3 @@ class _MyMultiSettingFit:
 
     def __getattr__(self, item: str) -> Any:
         return getattr(self.calibration.default_fit, item)
-
-
-def scale_by_factor(calibration: Calibration, factor: float) -> Calibration:
-    """Return copy of `calibration` w all sensitivity factors multiplied by `factor`"""
-    from spectro_inlets_quantification import CalPoint, Calibration
-
-    new_calibration_as_dict = calibration.as_dict().copy()
-
-    cal_list = []
-    for cal in calibration.cal_list:
-        new_cal_as_dict = cal.as_dict()
-        new_cal_as_dict.update(F=cal.F * factor, F_type=cal.F_type + " corrected")
-        cal_list.append(CalPoint(**new_cal_as_dict))
-    new_calibration_as_dict.update(cal_list=cal_list)
-    calibration = Calibration(**new_calibration_as_dict)
-    return calibration
-

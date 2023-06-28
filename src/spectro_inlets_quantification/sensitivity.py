@@ -133,8 +133,17 @@ class SensitivityFactor:
             mass=self.mass, mol=self.mol, F=self.F, f=self.f, F_type=self.F_type
         )
 
-    def __add__(self, other):
-        return append_sensitivity_factors(self, other)
+    def __add__(self, other: Union["SensitivityFactor", "SensitivityList"]) -> "SensitivityList":
+        """Add this SensitivityFactor to another SensitivityFactor or SensitivityList
+
+        The result is a SensitivityList including all the sensitivity factors of the two.
+        """
+        if isinstance(other, SensitivityList):
+            # This insures that SensitivityFactor + SensitivityList -> SensitivityList
+            return other + self
+        elif isinstance(other, SensitivityFactor):
+            return SensitivityList(sf_list=[self, other])
+        raise TypeError(f"can't add {self} and {other} together")
 
 
 class SensitivityUnion(SensitivityFactor):
@@ -221,13 +230,41 @@ class SensitivityList:
         """Return the number of the SensitivityFactors in the object."""
         return len(self.sf_list)
 
-    def __add__(self, other: "SensitivityList") -> "SensitivityList":
-        """Return a `SensitivityList` with the sensitivity factors of itself and ``other``."""
+    def __add__(self, other: [SensitivityFactor or "SensitivityList"]) -> "SensitivityList":
+        """Return a `SensitivityList` with the sensitivity factors of self and ``other``.
+
+        You can add SensitivityFactor, CalPoint, SensitivityList, or Calibration to a
+        SensitivityList or Calibration.
+        If either self or other is a Calibration, the result will be a Calibration.
+        """
+        if issubclass(other.__class__, self.__class__):
+            # This ensures that SensitivityList + Calibration -> Calibration
+            return other + self
+
+        if isinstance(other, SensitivityFactor):
+            # Adding a SensitivityFactor (or CalPoint) to a SensitivityList (or Calibration)
+            # just makes a copy with the new SensitivityFactor appended to the
+            # SensitivityList's list.
+            obj_as_dict = self.as_dict()
+            if "cal_dicts" in obj_as_dict:
+                obj_as_dict["cal_list"] = obj_as_dict["cal_list"] + [other]
+            else:
+                obj_as_dict["sf_list"] = obj_as_dict["sf_list"] + [other]
+            return self.__class__(**obj_as_dict)
+
         if isinstance(other, SensitivityList):
+            # Adding a SensitivityList to a SensitivityList (or Calibration) makes a
+            # copy with the two lists of sensitivity factors appended.
             sf_list = self.sf_list + other.sf_list
-        else:
-            raise TypeError(f"can't add {other} to {self}")
-        return SensitivityList(sf_list)
+            cls = self.__class__
+            obj_as_dict = self.as_dict()
+            if "cal_dicts" in obj_as_dict:
+                obj_as_dict["cal_list"] = sf_list
+            else:
+                obj_as_dict["sf_list"] = sf_list
+            return cls(**obj_as_dict)
+
+        raise TypeError(f"can't add {self} and {other} together")
 
     def __iadd__(
         self, other: Union["SensitivityList", Sequence[SensitivityFactor]]
@@ -1140,59 +1177,3 @@ class SensitivityFit:
             F_fit = self.alpha * f_fit
             ax.plot(f_fit, F_fit, "k--")  # type: ignore
         return ax
-
-
-def append_sensitivity_factors(*args):
-    """Recursively append elements in a list"""
-    sf = append_two_sensitivity_factors(args[0], args[1])
-    if len(args) == 2:
-        return sf
-    remaining_args = [sf] + list(args[2:])
-    return append_sensitivity_factors(*remaining_args)
-
-
-def append_two_sensitivity_factors(
-        sf_1: Union[SensitivityFactor, SensitivityList],
-        sf_2: Union[SensitivityFactor, SensitivityList]
-) -> SensitivityList:
-    """This should be incorporated into __add__ of SensitivityFactor and SensitivityList
-
-    Appends all the sensitivity factors in sf_1 and sf_2, which can each be a single
-    SensitivityFactor (or CalPoint) or a SensitivityList (or Calibration).
-
-    Args:
-        sf_1 (SensitivityFactor or SensitivityList): The first sensitivity factor or
-            list thereof.
-        sf_2 (SensitivityFactor or SensitivityList): The second sensitivity factor or
-            list thereof
-
-    Returns SensitivityList: a `SensitivityList` containing all of the sensitivity
-        factors in `sf_1` and `sf_2`. This will be a `Calibration` unless both `sf_1`
-        and `sf_2` are both themselves plain `SensitivityList`s
-    """
-    from .calibration import Calibration
-
-    if isinstance(sf_1, SensitivityList):
-        if isinstance(sf_2, SensitivityList):
-            return sf_1 + sf_2  # this is implemented in spectro_inlets_quantification
-        elif isinstance(sf_2, SensitivityFactor):
-            sf_list = sf_1.sf_list + [sf_2]
-            obj_as_dict: Any = sf_1.as_dict()
-            if isinstance(sf_1, Calibration):
-                obj_as_dict.pop("cal_dicts")
-                obj_as_dict["cal_list"] = sf_list
-                return Calibration(**obj_as_dict)
-            else:
-                obj_as_dict.pop("sf_dicts")
-                obj_as_dict["sf_list"] = sf_list
-                return SensitivityList(**obj_as_dict)
-        else:
-            raise TypeError(f"Can't add {sf_1} and {sf_2}")
-    elif isinstance(sf_1, SensitivityFactor):
-        if isinstance(sf_2, SensitivityFactor):
-            sf_list = [sf_1, sf_2]
-            return Calibration(cal_list=sf_list)
-        else:
-            return append_sensitivity_factors(sf_2, sf_1)
-    else:
-        raise TypeError(f"Can't add {sf_1} and {sf_2}")

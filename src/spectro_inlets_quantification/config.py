@@ -41,41 +41,28 @@ class Config(metaclass=Singleton):
         self._aux_data_directory = Path(path)
 
     @property
-    def chip_directory(self) -> Path:
+    def data_directories(self):
+        """Return data directories, in the order to look in them"""
+        if self.aux_data_directory:
+            return [self.aux_data_directory, self.data_directory]
+        return [self.data_directory]
+
+    @property
+    def chip_directories(self) -> list[Path]:
         """Get the chip directory."""
-        return self.data_directory / "chips"
+        return [d / "chips" for d in self.data_directories]
 
     @property
-    def calibration_directory(self) -> Path:
+    def calibration_directories(self) -> list[Path]:
         """Get the calibration directory."""
-        return self.data_directory / "calibrations"
+        return [d / "calibrations" for d in self.data_directories]
 
     @property
-    def molecule_directory(self) -> Path:
-        """Get the molecule director."""
-        return self.data_directory / "molecules"
+    def molecule_directories(self) -> list[Path]:
+        """Get the molecule directory."""
+        return [d / "molecules" for d in self.data_directories]
 
     @property
-    def processor_directory(self) -> Path:
+    def processor_directories(self) -> list[Path]:
         """Get the processor directory."""
-        return self.data_directory / "processors"
-
-    @property
-    def aux_chip_directory(self) -> Path:
-        """Get the chip directory."""
-        return self.aux_data_directory / "chips" if self.aux_data_directory else None
-
-    @property
-    def aux_calibration_directory(self) -> Path:
-        """Get the calibration directory."""
-        return self.aux_data_directory / "calibrations" if self.aux_data_directory else None
-
-    @property
-    def aux_molecule_directory(self) -> Path:
-        """Get the molecule director."""
-        return self.aux_data_directory / "molecules" if self.aux_data_directory else None
-
-    @property
-    def aux_processor_directory(self) -> Path:
-        """Get the processor directory."""
-        return self.aux_data_directory / "processors" if self.aux_data_directory else None
+        return [d / "processors" for d in self.data_directories]
