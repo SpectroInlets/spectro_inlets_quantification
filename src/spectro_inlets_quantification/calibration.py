@@ -267,15 +267,26 @@ class Calibration(SensitivityList):
         Args:
             file_name: Name of the calibration file
             cal_dir: Path to directory to save calibration in, defaults to
-                :attr:`Config.calibration_directory`
+                :attr:`Config.calibration_directory` in order
             kwargs: (Other) key word arguments are fed to `Calibration.__init__`
 
         Returns:
             Calibration: A calibration object ready to quantify your data!
         """
-        cal_dir = cal_dir or CONFIG.calibration_directories[0]
-        path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
-        with open(path_to_file, "r") as json_file:
+        file_name_with_suffix = Path(file_name).with_suffix(".json")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="calibrations", filepath=file_name_with_suffix, override_source_dir=cal_dir
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a calibration named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'calibrations' folder) to "
+                "`config.Config` or a ``cal_dir`` to this method, either of which contains the "
+                "calibration file."
+            ) from value_error
+
+        with open(file_path, "r") as json_file:
             self_as_dict = json.load(json_file)
 
         cal_dicts = self_as_dict.pop("cal_dicts")

@@ -303,9 +303,21 @@ class SignalProcessor:
         **kwargs: Any,
     ) -> "SignalProcessor":
         """Load the signal processor. The default has decent non-linearity correction."""
-        proc_dir = proc_dir or CONFIG.processor_directory
-        path_to_file = (proc_dir / file_name).with_suffix(".json")
-        with open(path_to_file, "r") as f:
+        file_name_with_suffix = Path(file_name).with_suffix(".json")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="processors", filepath=file_name_with_suffix,
+                override_source_dir=proc_dir
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a molecule named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'molecules' folder) to "
+                "`config.Config` or a ``mol_dir`` to this method, either of which contains "
+                "the molecule file."
+            ) from value_error
+
+        with open(file_path, "r") as f:
             self_as_dict = json.load(f)
         self_as_dict.update(kwargs)
         return cls(**self_as_dict)
