@@ -1,6 +1,7 @@
 # This file is under dual PROPRIETARY and GPL-3.0 licenses. See DUAL_LICENSE for details.
 
 """Functional tests for molecule"""
+from pathlib import Path
 
 import yaml
 
@@ -12,17 +13,18 @@ from spectro_inlets_quantification.molecule import Molecule
 CFG = Config()
 MOL_NAMES = [
     p.stem
-    for p in CFG.molecule_directory.iterdir()
+    for p in (CFG.data_directory / "molecules").iterdir()
     if not p.stem.startswith("_") and p.stem != "TEMPLATE"
 ]
 print(MOL_NAMES)
 
 
 @mark.parametrize("mol_name", MOL_NAMES)
-def test_load(mol_name):
+def test_load(mol_name, reset_singletons):
     """Test the load method"""
+    file_path = CFG.get_best_data_file("molecules", Path(f"{mol_name}.yml"))
     # Read the raw data
-    with open(CFG.molecule_directory / f"{mol_name}.yml") as f_:
+    with open(file_path) as f_:
         raw_data = yaml.safe_load(f_)
 
     # Sigma needs to have its keys converted back to int, because JSON converts them to strings

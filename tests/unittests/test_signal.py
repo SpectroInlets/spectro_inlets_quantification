@@ -19,7 +19,7 @@ from spectro_inlets_quantification.peak import Peak
 from spectro_inlets_quantification.signal import SignalDict, SignalProcessor
 
 CONFIG = Config()
-SIGNAL_MOD="spectro_inlets_quantification.signal"
+SIGNAL_MOD = "spectro_inlets_quantification.signal"
 FLOAT_RANGE_10 = np.arange(10, dtype=float)
 
 
@@ -340,7 +340,7 @@ class TestSignalProcessor:
     @patch("builtins.open", new_callable=mock_open, read_data='{"key": "value"}')
     @mark.parametrize("file_name", ["some filename", None])
     @mark.parametrize("proc_dir", [Path("home"), None])
-    def test_load(self, mock_open, file_name, proc_dir):
+    def test_load(self, mock_open, file_name, proc_dir, reset_singletons):
         """Test the load class method"""
         init_kwargs = {}
         if file_name:
@@ -348,15 +348,23 @@ class TestSignalProcessor:
         if proc_dir:
             init_kwargs["proc_dir"] = proc_dir
 
-        expected_proc_dir = proc_dir if proc_dir else CONFIG.processor_directory
-        expected_path = expected_proc_dir / (
-            (file_name if file_name else "Sorens final processor") + ".json"
+        # expected_proc_dir = proc_dir if proc_dir else CONFIG.processor_directories[0]
+        expected_filename = Path((file_name if file_name else "Sorens final processor") +
+                               ".json")
+
+
+        with patch("spectro_inlets_quantification.config.Config.get_best_data_file") as get_best:
+            get_best.return_value = Path("Best")
+            with patch(SIGNAL_MOD + ".SignalProcessor.__init__") as signal_processor_init:
+                signal_processor_init.return_value = None
+                SignalProcessor.load(**init_kwargs)
+        get_best.assert_called_once_with(
+            data_file_type="processors", filepath=expected_filename,
+            override_source_dir=proc_dir
         )
-        with patch(SIGNAL_MOD + ".SignalProcessor.__init__") as signal_processor_init:
-            signal_processor_init.return_value = None
-            SignalProcessor.load(**init_kwargs, extra_arg=8)
-        mock_open.assert_called_once_with(expected_path, "r")
-        signal_processor_init.assert_called_once_with(key="value", extra_arg=8)
+
+        mock_open.assert_called_once_with(Path("Best"), "r")
+        signal_processor_init.assert_called_once_with(key="value")
 
     def test_signals(self, signal_processor):
         """Test signals property"""
@@ -393,9 +401,7 @@ class TestSignalProcessor:
         p_vac = p_vac if p_vac else signal_processor.p_vac
         p_hat = p_vac / 1e-4
         non_linear_factor = 1 + 47.47 * p_hat + 1.23 * p_hat**2
-        assert non_linear_factor == approx(
-            signal_processor.calc_nonlinear_factor(p_vac=p_vac)
-        )
+        assert non_linear_factor == approx(signal_processor.calc_nonlinear_factor(p_vac=p_vac))
 
     @mark.parametrize("p_vac", [47.47, None])
     def test_correct_y(self, p_vac, signal_processor):
@@ -447,9 +453,7 @@ class TestSignalProcessor:
             with patch(SIGNAL_MOD + ".PEAK_CLASSES", PEAK_CLASSES):
                 mock_correct.return_value = y_masked
                 peak = signal_processor.make_peak(x, y, mass="M11", Mspan=Mspan, t=t)
-            mock_correct.assert_called_once_with(
-                approx(x_masked), approx(y_masked), p_vac=None
-            )
+            mock_correct.assert_called_once_with(approx(x_masked), approx(y_masked), p_vac=None)
 
         if fit_successful:
             mock_gauss_peak.assert_called_once_with(
@@ -505,13 +509,9 @@ class TestSignalProcessor:
     def test_get_average_of_last(self, mass_list, signal_processor):
         """Test get_average_of_last"""
         expected_mass_list = mass_list if mass_list else signal_processor.mass_list
-        with patch.object(
-            signal_processor.signal_dict, "get_average_of_last"
-        ) as mock_average:
+        with patch.object(signal_processor.signal_dict, "get_average_of_last") as mock_average:
             mock_average.return_value = 47
-            return_value = signal_processor.get_average_of_last(
-                123, mass_list=mass_list
-            )
+            return_value = signal_processor.get_average_of_last(123, mass_list=mass_list)
         assert return_value == 47
         mock_average.assert_called_once_with(123, expected_mass_list)
 

@@ -31,8 +31,8 @@ class Config(metaclass=Singleton):
         return self._data_directory
 
     @data_directory.setter
-    def data_directory(self, path: Path) -> None:
-        self._data_directory = Path(path)
+    def data_directory(self, path: Optional[Path]) -> None:
+        self._data_directory = None if path is None else Path(path)
 
     @property
     def aux_data_directory(self) -> Path:
@@ -45,16 +45,15 @@ class Config(metaclass=Singleton):
 
     @property
     def data_directories(self):
-        """Return data directories, in the order to look in them"""
+        """Return data directories, in the order to look in them."""
         if self.aux_data_directory:
             return [self.aux_data_directory, self.data_directory]
         return [self.data_directory]
 
     def get_best_data_file(
-        self, data_file_type: str, filepath: Path, override_source_dir: Optional[Path] =
-            None
+        self, data_file_type: str, filepath: Path, override_source_dir: Optional[Path] = None
     ) -> Path:
-        """Return the best source for a specific data file
+        """Return the best source for a specific data file.
 
         Args:
             data_file_type (str): One of "calibrations", "chips", "molecules" or "processors"
@@ -72,7 +71,8 @@ class Config(metaclass=Singleton):
         if data_file_type not in self.valid_data_file_types:
             raise ValueError(
                 f"Invalid data file type: '{data_file_type}'. Valid options are: "
-                f"{self.valid_data_file_types}")
+                f"{self.valid_data_file_types}"
+            )
 
         sources = [override_source_dir] if override_source_dir else []
         sources += [d / data_file_type for d in self.data_directories]

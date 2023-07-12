@@ -20,12 +20,12 @@ Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 
 """
-import yaml
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
 
 import numpy as np
+import yaml
 from attrs import Attribute, asdict, define, field
 
 from .compatability import TypeAlias
@@ -214,8 +214,9 @@ class Molecule:
         file_name_with_suffix = Path(file_name).with_suffix(".yml")
         try:
             file_path = CONFIG.get_best_data_file(
-                data_file_type="molecules", filepath=file_name_with_suffix,
-                override_source_dir=mol_dir
+                data_file_type="molecules",
+                filepath=file_name_with_suffix,
+                override_source_dir=mol_dir,
             )
         except ValueError as value_error:
             raise ValueError(
