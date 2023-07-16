@@ -64,8 +64,8 @@ class Config(metaclass=Singleton):
         'best' means the following order of preferences: [override, aux_dir, packaged] where:
 
          * **override** is the value of ``override_source_dir``
-         * **aux_dir** is self.aux_data_directory / "calibrations"
-         * **packaged** is self.data_directory / "calibrations"
+         * **aux_dir** is self.aux_data_directory / data_file_type
+         * **packaged** is self.data_directory / data_file_type
 
         """
         if data_file_type not in self.valid_data_file_types:
