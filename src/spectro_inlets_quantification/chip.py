@@ -115,25 +115,28 @@ class Chip:
         """Loads a chip object from a .json file.
 
         Args:
-            file_name: name of the .json file. filename.endswith(".json")
+            file_name: Name of the chip file
             chip_dir: path to directory to save chip in, defaults to
-                the :attr:`Config.chip_directory`
+                the :attr:`Config.chip_directories` in order
             kwargs: (other) key word arguments are fed to Chip.__init__()
 
         Returns:
             Chip: a Chip object ready to calculate your capillary flux!
         """
-        for chip_dir in CONFIG.chip_directories:
-            path_to_json = (Path(chip_dir) / file_name).with_suffix(".json")
-            try:
-                with open(path_to_json) as json_file:
-                    self_as_dict = json.load(json_file)
-            except FileNotFoundError:
-                continue
-            else:
-                break
-        else:
-            raise FileNotFoundError(f"no chip file available called {file_name}")
+        file_name_with_suffix = Path(file_name).with_suffix(".json")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="chips", filepath=file_name_with_suffix, override_source_dir=chip_dir
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a chip named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'chips' folder) to `config.Config` "
+                "or a ``chip_dir`` to this method, either of which contains the chip file."
+            ) from value_error
+
+        with open(file_path) as json_file:
+            self_as_dict = json.load(json_file)
         self_as_dict.update(kwargs)
         return cls(**self_as_dict)
 

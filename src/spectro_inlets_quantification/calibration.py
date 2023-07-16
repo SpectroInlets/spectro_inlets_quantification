@@ -11,7 +11,7 @@ then use that to initiate a `Calibration`.
 import json
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 import attr
 
@@ -267,15 +267,28 @@ class Calibration(SensitivityList):
         Args:
             file_name: Name of the calibration file
             cal_dir: Path to directory to save calibration in, defaults to
-                :attr:`Config.calibration_directory`
+                :attr:`Config.calibration_directory` in order
             kwargs: (Other) key word arguments are fed to `Calibration.__init__`
 
         Returns:
             Calibration: A calibration object ready to quantify your data!
         """
-        cal_dir = cal_dir or CONFIG.calibration_directories[0]
-        path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
-        with open(path_to_file, "r") as json_file:
+        file_name_with_suffix = Path(file_name).with_suffix(".json")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="calibrations",
+                filepath=file_name_with_suffix,
+                override_source_dir=cal_dir,
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a calibration named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'calibrations' folder) to "
+                "`config.Config` or a ``cal_dir`` to this method, either of which contains the "
+                "calibration file."
+            ) from value_error
+
+        with open(file_path, "r") as json_file:
             self_as_dict = json.load(json_file)
 
         cal_dicts = self_as_dict.pop("cal_dicts")
@@ -507,7 +520,7 @@ class Calibration(SensitivityList):
     # ------ methods for manipulating the calibration ------- #
 
     def add_isotopes(self, isotope_spec: Dict[str, Tuple[str, List[str]]]) -> None:
-        """Duplicate sensitivity factor(s) in the calibration to cover different isotopes
+        """Duplicate sensitivity factor(s) in the calibration to cover different isotopes.
 
         This method adds CalPoints in the calibration for each new tracked isotope. It
         assumes that the sensitivity factor for each isotope at its respective mass is
@@ -549,7 +562,7 @@ class Calibration(SensitivityList):
                 mdict[new_mol] = new_molecule
 
     def scaled_by_factor(self, factor: float) -> "Calibration":
-        """Return a copy of self with all sensitivity factors multiplied by factor"""
+        """Return a copy of self with all sensitivity factors multiplied by factor."""
         new_calibration_as_dict = self.as_dict().copy()
         cal_list = []
         for cal in self.cal_list:

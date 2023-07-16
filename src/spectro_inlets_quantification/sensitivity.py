@@ -134,7 +134,7 @@ class SensitivityFactor:
         )
 
     def __add__(self, other: Union["SensitivityFactor", "SensitivityList"]) -> "SensitivityList":
-        """Add this SensitivityFactor to another SensitivityFactor or SensitivityList
+        """Add this SensitivityFactor to another SensitivityFactor or SensitivityList.
 
         The result is a SensitivityList including all the sensitivity factors of the two.
         """
