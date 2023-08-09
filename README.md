@@ -9,6 +9,8 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/charliermarsh/ruff)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
+Documentation for this package is [here](https://spectroinlets-spectro-inlets-quantification.readthedocs-hosted.com/en/v1.1/)
+
 ## Developing
 
 To get a development environment setup, make a virtual environment and install invoke and then run
