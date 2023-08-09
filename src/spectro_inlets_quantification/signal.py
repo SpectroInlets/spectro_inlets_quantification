@@ -32,7 +32,7 @@ during a measurement.
 """
 
 from pathlib import Path  # noqa
-import json
+import yaml
 from typing import (
     Optional,
     Dict,
@@ -277,7 +277,7 @@ class SignalProcessor:
                 determined by Soren using closed-top chip measurements on LGACore in
                 August 2020,  which approx. agree with those in Bela's linearity
                 tests in March 2020, use the load constructor with 'Sorens final
-                processor.json'
+                processor.yml'
             signal_dict (SignalDict): The signal dictionary in which to record
                 calculated signals
             tstamp (float): The unix timestamp which indicates the start of the measurement,
@@ -303,7 +303,7 @@ class SignalProcessor:
         **kwargs: Any,
     ) -> "SignalProcessor":
         """Load the signal processor. The default has decent non-linearity correction."""
-        file_name_with_suffix = Path(file_name).with_suffix(".json")
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
         try:
             file_path = CONFIG.get_best_data_file(
                 data_file_type="processors",
@@ -319,7 +319,7 @@ class SignalProcessor:
             ) from value_error
 
         with open(file_path, "r") as f:
-            self_as_dict = json.load(f)
+            self_as_dict = yaml.safe_load(f)
         self_as_dict.update(kwargs)
         return cls(**self_as_dict)
 

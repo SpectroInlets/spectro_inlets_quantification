@@ -8,7 +8,7 @@ Equivalently initiating a `SensitivityList` from a ``sf_list`` of SensitivityFac
 the way to make a calibration during dev-time is to add CalPoints to a `cal_list` and
 then use that to initiate a `Calibration`.
 """
-import json
+import yaml
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
@@ -18,7 +18,7 @@ import attr
 from .chip import Chip
 from .config import Config
 from .constants import STANDARD_MOL_COLORS
-from .custom_types import JSONVALUE, MASS, MASSLIST, MOL, MOLLIST, PATHLIKE
+from .custom_types import YAMLVALUE, MASS, MASSLIST, MOL, MOLLIST, PATHLIKE
 from .molecule import Molecule, MoleculeDict
 from .sensitivity import (  # noqa
     SENSITIVITYLIST_FILTER_TYPE,
@@ -73,13 +73,13 @@ class CalPoint(SensitivityFactor):
     description: Optional[str] = attr.ib(default=None)
     date: str = attr.ib(default=TODAY)
     setup: Optional[str] = attr.ib(default=None)
-    internal_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
-    external_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
+    internal_conditions: Optional[Dict[str, YAMLVALUE]] = attr.ib(default=None)
+    external_conditions: Optional[Dict[str, YAMLVALUE]] = attr.ib(default=None)
 
-    def as_dict(self) -> Dict[str, Union[float, str, Dict[str, JSONVALUE]]]:
+    def as_dict(self) -> Dict[str, Union[float, str, Dict[str, YAMLVALUE]]]:
         """Return the dictionary representation of the CalPoint."""
         self_as_dict = cast(
-            Dict[str, Union[float, str, Dict[str, JSONVALUE]]],
+            Dict[str, Union[float, str, Dict[str, YAMLVALUE]]],
             super().as_dict(),
         )
         self_as_dict.update(
@@ -134,7 +134,7 @@ class Calibration(SensitivityList):
     one or more sensitivity matrices (make_sensitivity_matrix())
     """
 
-    # ---- methods whose primary purpose is interface with the .json ---- #
+    # ---- methods whose primary purpose is interface with the .yml ---- #
 
     def __init__(
         self,
@@ -237,11 +237,11 @@ class Calibration(SensitivityList):
         return self_as_dict
 
     def save(self, file_name: str = None, cal_dir: PATHLIKE = None) -> None:
-        """Save the `as_dict` form of the calibration to a .json file.
+        """Save the `as_dict` form of the calibration to a .yml file.
 
         Args:
-            file_name (str): Name of file to save in, must end in .json
-                If not specified, will use self.name + ".json"
+            file_name (str): Name of file to save in, must end in .yml
+                If not specified, will use self.name + ".yml"
             cal_dir: Path to directory to save calibration in, defaults to
                 :attr:`Config.calibration_directory`
         Raises:
@@ -253,16 +253,16 @@ class Calibration(SensitivityList):
             if "None" in self.name:
                 raise ValueError("Calibration.save demands a file_name!")
             else:
-                file_name = self.name + ".json"
+                file_name = self.name + ".yml"
         cal_dir = cal_dir or CONFIG.calibration_directories[0]
-        path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
+        path_to_file = (Path(cal_dir) / file_name).with_suffix(".yml")
         self_as_dict = self.as_dict()
-        with open(path_to_file, "w") as json_file:
-            json.dump(self_as_dict, json_file, indent=4)
+        with open(path_to_file, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod
     def load(cls, file_name: PATHLIKE, cal_dir: PATHLIKE = None, **kwargs: Any) -> "Calibration":
-        """Loads a calibration object from a .json file.
+        """Loads a calibration object from a .yml file.
 
         Args:
             file_name: Name of the calibration file
@@ -273,7 +273,7 @@ class Calibration(SensitivityList):
         Returns:
             Calibration: A calibration object ready to quantify your data!
         """
-        file_name_with_suffix = Path(file_name).with_suffix(".json")
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
         try:
             file_path = CONFIG.get_best_data_file(
                 data_file_type="calibrations",
@@ -288,8 +288,8 @@ class Calibration(SensitivityList):
                 "calibration file."
             ) from value_error
 
-        with open(file_path, "r") as json_file:
-            self_as_dict = json.load(json_file)
+        with open(file_path, "r") as yaml_file:
+            self_as_dict = yaml.safe_load(yaml_file)
 
         cal_dicts = self_as_dict.pop("cal_dicts")
 
