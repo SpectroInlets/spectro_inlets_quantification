@@ -60,13 +60,17 @@ In addition, there are a few abbreviations worth knowing:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 """
 
-__version__ = "1.1"
+__version__ = "1.2.1"
 __title__ = "spectro-inlets-quantification"
 __description__ = "Physics-based tools for quantitative MS"
 __author__ = "Spectro Inlets Software"
 __email__ = "software@spectroinlets.com"
 
+# I like this to be sure I'm importing from where I think I am:
+print(f"importing spectro_inlets_quantification v{__version__} from {__file__}")
+
 # automatic imports, from lowest to highest-level modules:
+
 
 from . import constants
 from . import tools

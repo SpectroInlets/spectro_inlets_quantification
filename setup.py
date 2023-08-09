@@ -20,15 +20,14 @@ def read(file):
 
 setup(
     name="spectro_inlets_quantification",
-    version="1.1",
+    # version="1.2",   # this is ignored in favor of that in __init__.py
     packages=PACKAGES,
     package_dir={"": "src"},
-
     license="DUAL_LICENSE",
     author="Spectro Inlets A/S",
     # author_email=None,
-    # description="Spectro Inlets' open package for MS quantification",
-    long_description=read("README.md"),
+    description="Spectro Inlets open package for MS quantification",
+    long_description=read("README.md"),  # note this is overridden by pyproject.toml
     long_description_content_type="text/markdown",
     url="https://github.com/SpectroInlets/spectro_inlets_quantification",
     classifiers=[
@@ -38,4 +37,12 @@ setup(
     ],
     install_requires=read("requirements.txt").split("\n"),
     python_requires=">=3.6",
+    include_package_data=True,
+    package_data={"": [
+        "data/*.yml",
+        "data/chips/*.yml",
+        "data/molecules/*.yml",
+        "data/calibrations/*.yml",
+        "data/processors/*.yml"
+    ]}
 )
