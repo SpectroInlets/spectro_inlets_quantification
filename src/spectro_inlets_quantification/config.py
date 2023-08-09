@@ -86,22 +86,48 @@ class Config(metaclass=Singleton):
             f"in any of the available source directories {sources} for that data file type"
         )
 
-    @property
-    def chip_directories(self) -> list[Path]:
-        """Get the chip directory."""
-        return [d / "chips" for d in self.data_directories]
+    def get_save_destination(
+        self,
+        data_file_type: str,
+        filepath: Path,
+        override_destination_dir: Optional[Path] = None
+    ) -> Path:
+        """Return the best destination for a specific data file. Create the folder if needed.
 
-    @property
-    def calibration_directories(self) -> list[Path]:
-        """Get the calibration directory."""
-        return [d / "calibrations" for d in self.data_directories]
+        Args:
+            data_file_type (str): One of "calibrations", "chips", "molecules" or "processors"
+            filepath (str): The name of the requested data file including extension
+            override_destination_dir (Path): (Optional) the directory to save the file in
+                if given and containing the ``filename``
 
-    @property
-    def molecule_directories(self) -> list[Path]:
-        """Get the molecule directory."""
-        return [d / "molecules" for d in self.data_directories]
+        'best' means the following order of preferences: [override, aux_dir, packaged] where:
 
-    @property
-    def processor_directories(self) -> list[Path]:
-        """Get the processor directory."""
-        return [d / "processors" for d in self.data_directories]
+         * **override** is the value of ``override_source_dir``
+         * **aux_dir** is self.aux_data_directory / data_file_type
+         * **packaged** is self.data_directory / data_file_type
+
+        """
+        if data_file_type not in self.valid_data_file_types:
+            raise ValueError(
+                f"Invalid data file type: '{data_file_type}'. Valid options are: "
+                f"{self.valid_data_file_types}"
+            )
+
+        destinations = [override_destination_dir] if override_destination_dir else []
+        destinations += [d / data_file_type for d in self.data_directories]
+        for destination in destinations:
+            if not destination.exists():
+                destination.mkdir(parents=True)
+            complete_path = destination / filepath
+            if complete_path.exists():
+                # TODO: replace this with a prompt to confirm overwrite
+                print(
+                    f"Warning: Now overwriting {complete_path}. "
+                    "We hope you know what you are doing."
+                )
+            return complete_path
+
+        raise ValueError(
+            f"Unable to locate the data file {filepath} of data file type '{data_file_type}' "
+            f"in any of the available source directories {destinations} for that data file type"
+        )

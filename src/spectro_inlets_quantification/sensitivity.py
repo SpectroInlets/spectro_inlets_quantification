@@ -121,8 +121,9 @@ class SensitivityFactor:
         self_as_dict = {
             "mol": self.mol,
             "mass": self.mass,
-            "F": self.F,
-            "f": self.f,
+            # because YAML becomes unreadable with numpy.float64
+            "F": float(self.F) if self.F else None,
+            "f": float(self.f) if self.f else None,
             "F_type": self.F_type,
         }
         return cast(SENSITIVITYFACTOR_AS_DICT, self_as_dict)

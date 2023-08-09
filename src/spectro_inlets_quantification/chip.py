@@ -103,10 +103,14 @@ class Chip:
                 the spitze chips folder.
             kwargs: (other) key word arguments are added to self_as_dict before saving.
         """
-        chip_dir = chip_dir or CONFIG.chip_directory
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="chips",
+            filepath=file_name_with_suffix,
+            override_destination_dir=chip_dir,
+        )
         self_as_dict = self.as_dict()
         self_as_dict.update(kwargs)
-        path_to_yaml = Path(chip_dir) / file_name
         with open(path_to_yaml, "w") as yaml_file:
             yaml.dump(self_as_dict, yaml_file, indent=4)
 

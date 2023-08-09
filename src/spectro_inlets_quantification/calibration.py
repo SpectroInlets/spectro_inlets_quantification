@@ -249,15 +249,14 @@ class Calibration(SensitivityList):
                 (this is the case if name wasn't specified
                 and either date or setup wasn't specified when initiating)
         """
-        if file_name is None:
-            if "None" in self.name:
-                raise ValueError("Calibration.save demands a file_name!")
-            else:
-                file_name = self.name + ".yml"
-        cal_dir = cal_dir or CONFIG.calibration_directories[0]
-        path_to_file = (Path(cal_dir) / file_name).with_suffix(".yml")
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="calibrations",
+            filepath=file_name_with_suffix,
+            override_destination_dir=cal_dir,
+        )
         self_as_dict = self.as_dict()
-        with open(path_to_file, "w") as yaml_file:
+        with open(path_to_yaml, "w") as yaml_file:
             yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod

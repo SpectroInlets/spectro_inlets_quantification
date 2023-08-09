@@ -95,7 +95,6 @@ class Quantifier:
         self.mdict = MoleculeDict()
 
         # ------- the calibration and SensitivityMatrix -------------- #
-        cal_dir = cal_dir or CONFIG.calibration_directories[0]
         self.calibration_file = calibration_file
         self.calibration = calibration or Calibration.load(
             calibration_file,

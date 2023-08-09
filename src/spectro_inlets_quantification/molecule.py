@@ -188,10 +188,12 @@ class Molecule:
                 :attr:`Config.molecule_directory`
             file_name: Name of the yaml file, including the file extension ".yml"
         """
-        mol_dir = mol_dir or CONFIG.molecule_directories[0]
-        if file_name is None:
-            file_name = self.name + ".yml"
-        path_to_yaml = Path(mol_dir) / file_name
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="molecules",
+            filepath=file_name_with_suffix,
+            override_destination_dir=mol_dir,
+        )
         self_as_dict = self.as_dict()
         with open(path_to_yaml, "w") as yaml_file:
             yaml.dump(self_as_dict, yaml_file, indent=4)

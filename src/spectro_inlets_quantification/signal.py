@@ -59,6 +59,8 @@ from .peak import PEAK_CLASSES, Peak
 from .config import Config
 from .compatability import TypeAlias
 
+PATH_OR_STR: TypeAlias = Union[Path, str]
+
 if TYPE_CHECKING:
     from matplotlib import pyplot
 
@@ -294,6 +296,28 @@ class SignalProcessor:
         self.nonlin_coeff = nonlin_coeff
         self.medium = Medium()
         self.verbose = verbose
+
+    def save(self, proc_dir: Optional[PATH_OR_STR] = None,
+             file_name: Optional[str] = None) -> None:
+        """Save the `as_dict` form of the molecule to a yaml file.
+
+        Saves in `CONFIG.aux_data_directory / "molecules"` by default. This is the
+        user's quant data library (as opposed to the included library).
+
+        Args:
+            proc_dir: Path to directory to save processor in, defaults to
+                :attr:`Config.processor_directory`
+            file_name: Name of the yaml file, including the file extension ".yml"
+        """
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="processors",
+            filepath=file_name_with_suffix,
+            override_destination_dir=proc_dir,
+        )
+        self_as_dict = self.as_dict()
+        with open(path_to_yaml, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod
     def load(
