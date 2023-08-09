@@ -230,7 +230,10 @@ class SensitivityList:
         """Return the number of the SensitivityFactors in the object."""
         return len(self.sf_list)
 
-    def __add__(self, other: [SensitivityFactor or "SensitivityList"]) -> "SensitivityList":
+    def __add__(
+            self,
+            other: Union[SensitivityFactor, "SensitivityList"]
+    ) -> "SensitivityList":
         """Return a `SensitivityList` with the sensitivity factors of self and ``other``.
 
         You can add SensitivityFactor, CalPoint, SensitivityList, or Calibration to a
@@ -246,11 +249,12 @@ class SensitivityList:
             # just makes a copy with the new SensitivityFactor appended to the
             # SensitivityList's list.
             obj_as_dict = self.as_dict()
-            if "cal_dicts" in obj_as_dict:
-                obj_as_dict["cal_list"] = obj_as_dict["cal_list"] + [other]
+            cls = self.__class__
+            if hasattr(self, "cal_list"):
+                obj_as_dict["cal_list"] = getattr(self, "cal_list", None) + [other]
             else:
-                obj_as_dict["sf_list"] = obj_as_dict["sf_list"] + [other]
-            return self.__class__(**obj_as_dict)
+                obj_as_dict["sf_list"] = getattr(self, "sf_list", None) + [other]
+            return cls(**obj_as_dict)
 
         if isinstance(other, SensitivityList):
             # Adding a SensitivityList to a SensitivityList (or Calibration) makes a
