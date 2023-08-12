@@ -60,7 +60,7 @@ In addition, there are a few abbreviations worth knowing:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 """
 
-__version__ = "1.2.1"
+__version__ = "1.2.3"
 __title__ = "spectro-inlets-quantification"
 __description__ = "Physics-based tools for quantitative MS"
 __author__ = "Spectro Inlets Software"
