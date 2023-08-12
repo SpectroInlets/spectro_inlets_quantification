@@ -241,7 +241,8 @@ class SensitivityList:
         SensitivityList or Calibration.
         If either self or other is a Calibration, the result will be a Calibration.
         """
-        if issubclass(other.__class__, self.__class__):
+        if self.__class__ is not other.__class__ and\
+                issubclass(other.__class__, self.__class__):
             # This ensures that SensitivityList + Calibration -> Calibration
             return other + self
 
