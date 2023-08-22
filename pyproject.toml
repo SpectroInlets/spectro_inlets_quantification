@@ -41,8 +41,7 @@ dev = [
     "sphinx",
     "myst-parser",
     "sphinx-rtd-theme",
-    # This results in an error when running setup.py:
-    # "git+https://github.com/executablebooks/sphinx-proof@d37495f",
+    "git+https://github.com/executablebooks/sphinx-proof@d37495f",
     "freezegun",
     "toml",
 ]
