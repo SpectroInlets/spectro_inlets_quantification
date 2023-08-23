@@ -16,7 +16,7 @@ Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 """
 
-import json
+import yaml
 from math import isclose
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Union, cast
@@ -43,7 +43,7 @@ CONFIG = Config()
 class Chip:
     """The Chip class. Mainly used for calculating the capillary flux."""
 
-    # ---- methods whose primary purpose is interface with the .json ---- #
+    # ---- methods whose primary purpose is interface with the .yml ---- #
     def __init__(
         self,
         *,
@@ -94,39 +94,53 @@ class Chip:
         return self_as_dict
 
     def save(self, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> None:
-        """Save the `as_dict` form of the chip to a .json file.
+        """Save the `as_dict` form of the chip to a .yml file.
 
         Args:
-            file_name: Name of the .json file. Should include the file suffix;
-                file_name.endswith(".json")
+            file_name: Name of the .yml file. Should include the file suffix;
+                file_name.endswith(".yml")
             chip_dir: path to directory to save chip in, defaults to :attr:`Config.chip_directory`
                 the spitze chips folder.
             kwargs: (other) key word arguments are added to self_as_dict before saving.
         """
-        chip_dir = chip_dir or CONFIG.chip_directory
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="chips",
+            filepath=file_name_with_suffix,
+            override_destination_dir=chip_dir,
+        )
         self_as_dict = self.as_dict()
         self_as_dict.update(kwargs)
-        path_to_json = Path(chip_dir) / file_name
-        with open(path_to_json, "w") as json_file:
-            json.dump(self_as_dict, json_file, indent=4)
+        with open(path_to_yaml, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod
     def load(cls, file_name: str, chip_dir: Optional[PATHLIKE] = None, **kwargs: Any) -> "Chip":
-        """Loads a chip object from a .json file.
+        """Loads a chip object from a .yml file.
 
         Args:
-            file_name: name of the .json file. filename.endswith(".json")
+            file_name: Name of the chip file
             chip_dir: path to directory to save chip in, defaults to
-                the :attr:`Config.chip_directory`
+                the :attr:`Config.chip_directories` in order
             kwargs: (other) key word arguments are fed to Chip.__init__()
 
         Returns:
             Chip: a Chip object ready to calculate your capillary flux!
         """
-        chip_dir = chip_dir or CONFIG.chip_directory
-        path_to_json = (Path(chip_dir) / file_name).with_suffix(".json")
-        with open(path_to_json) as json_file:
-            self_as_dict = json.load(json_file)
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="chips", filepath=file_name_with_suffix, override_source_dir=chip_dir
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a chip named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'chips' folder) to `config.Config` "
+                "or a ``chip_dir`` to this method, either of which contains the chip file."
+            ) from value_error
+
+        with open(file_path) as yaml_file:
+            self_as_dict = yaml.safe_load(yaml_file)
         self_as_dict.update(kwargs)
         return cls(**self_as_dict)
 

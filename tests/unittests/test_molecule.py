@@ -77,10 +77,10 @@ class TestMoleculeDict:
     @patch("builtins.open", new_callable=mock_open)
     @mark.parametrize("mol_dir", (None, "test_mol_dir"))
     @mark.parametrize("file_name", (None, "test_filename"))
-    def test_save(self, mock_open, mol_dir, file_name, molecule):
+    def test_save(self, mock_open, mol_dir, file_name, molecule, reset_singletons):
         """Test save"""
-        mol_dir = mol_dir or CONFIG.molecule_directory
-        file_name = file_name or molecule.name + ".json"
+        mol_dir = mol_dir or CONFIG.molecule_directories[0]
+        file_name = file_name or molecule.name + ".yml"
         save_path = Path(mol_dir) / file_name
         with patch.object(molecule, "as_dict") as mock_as_dict:
             mock_as_dict.return_value = {"a": 47}
@@ -90,4 +90,4 @@ class TestMoleculeDict:
             handle = mock_open()
 
             out = "".join(c[0][0] for c in handle.write.call_args_list)
-            assert out == '{\n    "a": 47\n}'
+            assert out == 'a: 47\n'

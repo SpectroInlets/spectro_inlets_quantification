@@ -32,7 +32,7 @@ during a measurement.
 """
 
 from pathlib import Path  # noqa
-import json
+import yaml
 from typing import (
     Optional,
     Dict,
@@ -58,6 +58,8 @@ from .medium import Medium
 from .peak import PEAK_CLASSES, Peak
 from .config import Config
 from .compatability import TypeAlias
+
+PATH_OR_STR: TypeAlias = Union[Path, str]
 
 if TYPE_CHECKING:
     from matplotlib import pyplot
@@ -277,7 +279,7 @@ class SignalProcessor:
                 determined by Soren using closed-top chip measurements on LGACore in
                 August 2020,  which approx. agree with those in Bela's linearity
                 tests in March 2020, use the load constructor with 'Sorens final
-                processor.json'
+                processor.yml'
             signal_dict (SignalDict): The signal dictionary in which to record
                 calculated signals
             tstamp (float): The unix timestamp which indicates the start of the measurement,
@@ -295,6 +297,28 @@ class SignalProcessor:
         self.medium = Medium()
         self.verbose = verbose
 
+    def save(self, proc_dir: Optional[PATH_OR_STR] = None,
+             file_name: Optional[str] = None) -> None:
+        """Save the `as_dict` form of the molecule to a yaml file.
+
+        Saves in `CONFIG.aux_data_directory / "molecules"` by default. This is the
+        user's quant data library (as opposed to the included library).
+
+        Args:
+            proc_dir: Path to directory to save processor in, defaults to
+                :attr:`Config.processor_directory`
+            file_name: Name of the yaml file, including the file extension ".yml"
+        """
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="processors",
+            filepath=file_name_with_suffix,
+            override_destination_dir=proc_dir,
+        )
+        self_as_dict = self.as_dict()
+        with open(path_to_yaml, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
+
     @classmethod
     def load(
         cls,
@@ -303,10 +327,23 @@ class SignalProcessor:
         **kwargs: Any,
     ) -> "SignalProcessor":
         """Load the signal processor. The default has decent non-linearity correction."""
-        proc_dir = proc_dir or CONFIG.processor_directory
-        path_to_file = (proc_dir / file_name).with_suffix(".json")
-        with open(path_to_file, "r") as f:
-            self_as_dict = json.load(f)
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="processors",
+                filepath=file_name_with_suffix,
+                override_source_dir=proc_dir,
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a processor named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'molecules' folder) to "
+                "`config.Config` or a ``mol_dir`` to this method, either of which contains "
+                "the molecule file."
+            ) from value_error
+
+        with open(file_path, "r") as f:
+            self_as_dict = yaml.safe_load(f)
         self_as_dict.update(kwargs)
         return cls(**self_as_dict)
 

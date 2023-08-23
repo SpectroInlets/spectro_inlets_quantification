@@ -8,17 +8,17 @@ Equivalently initiating a `SensitivityList` from a ``sf_list`` of SensitivityFac
 the way to make a calibration during dev-time is to add CalPoints to a `cal_list` and
 then use that to initiate a `Calibration`.
 """
-import json
+import yaml
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 import attr
 
 from .chip import Chip
 from .config import Config
 from .constants import STANDARD_MOL_COLORS
-from .custom_types import JSONVALUE, MASS, MASSLIST, MOL, MOLLIST, PATHLIKE
+from .custom_types import YAMLVALUE, MASS, MASSLIST, MOL, MOLLIST, PATHLIKE
 from .molecule import Molecule, MoleculeDict
 from .sensitivity import (  # noqa
     SENSITIVITYLIST_FILTER_TYPE,
@@ -73,13 +73,13 @@ class CalPoint(SensitivityFactor):
     description: Optional[str] = attr.ib(default=None)
     date: str = attr.ib(default=TODAY)
     setup: Optional[str] = attr.ib(default=None)
-    internal_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
-    external_conditions: Optional[Dict[str, JSONVALUE]] = attr.ib(default=None)
+    internal_conditions: Optional[Dict[str, YAMLVALUE]] = attr.ib(default=None)
+    external_conditions: Optional[Dict[str, YAMLVALUE]] = attr.ib(default=None)
 
-    def as_dict(self) -> Dict[str, Union[float, str, Dict[str, JSONVALUE]]]:
+    def as_dict(self) -> Dict[str, Union[float, str, Dict[str, YAMLVALUE]]]:
         """Return the dictionary representation of the CalPoint."""
         self_as_dict = cast(
-            Dict[str, Union[float, str, Dict[str, JSONVALUE]]],
+            Dict[str, Union[float, str, Dict[str, YAMLVALUE]]],
             super().as_dict(),
         )
         self_as_dict.update(
@@ -128,18 +128,18 @@ class CalPoint(SensitivityFactor):
 class Calibration(SensitivityList):
     """Class for saving and loading measured sensitivity factors.
 
-    Dev time usage is to directly initiate a calibration with a list of CalPoints
-    (cal_list argument to __init__()) and then save it (save())
+    Dev time usage is to directly initiate a calibration with a list of CalPoint's or
+    SensitivityFactor's (cal_list argument to __init__()) and then save it (save())
     Quant time usage is to load a calibration (load()) and then use it to generate
     one or more sensitivity matrices (make_sensitivity_matrix())
     """
 
-    # ---- methods whose primary purpose is interface with the .json ---- #
+    # ---- methods whose primary purpose is interface with the .yml ---- #
 
     def __init__(
         self,
         # calibration basics:
-        cal_list: Optional[List[CalPoint]] = None,
+        cal_list: Optional[List[SensitivityFactor]] = None,
         name: Optional[str] = None,
         *,
         setup: Optional[str] = None,
@@ -159,9 +159,9 @@ class Calibration(SensitivityList):
         To load an existing calibration, use `Calibration.load`.
 
         Args:
-            cal_list (list of CalPoint): The list of calibrations points (takes the
-                place of ``SensitivityList.sf_list``), each having as a minimum a mol, mass
-                and sensitivity factor in [C/mol].
+            cal_list (list of SensitivityFactors): The list of calibrations points, each
+                having as a minimum a mol, mass and sensitivity factor in [C/mol]. These
+                will most often be of the more specific type, `CalPoint`.
             name (str): The name of the calibration. By default,
                 name = f"{date}_{setup}_{detector}_{description}_{TODAY}"
             setup (str): The setup for which the calibration was made / is valid
@@ -237,11 +237,11 @@ class Calibration(SensitivityList):
         return self_as_dict
 
     def save(self, file_name: str = None, cal_dir: PATHLIKE = None) -> None:
-        """Save the `as_dict` form of the calibration to a .json file.
+        """Save the `as_dict` form of the calibration to a .yml file.
 
         Args:
-            file_name (str): Name of file to save in, must end in .json
-                If not specified, will use self.name + ".json"
+            file_name (str): Name of file to save in, must end in .yml
+                If not specified, will use self.name + ".yml"
             cal_dir: Path to directory to save calibration in, defaults to
                 :attr:`Config.calibration_directory`
         Raises:
@@ -249,34 +249,46 @@ class Calibration(SensitivityList):
                 (this is the case if name wasn't specified
                 and either date or setup wasn't specified when initiating)
         """
-        if file_name is None:
-            if "None" in self.name:
-                raise ValueError("Calibration.save demands a file_name!")
-            else:
-                file_name = self.name + ".json"
-        cal_dir = cal_dir or CONFIG.calibration_directory
-        path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="calibrations",
+            filepath=file_name_with_suffix,
+            override_destination_dir=cal_dir,
+        )
         self_as_dict = self.as_dict()
-        with open(path_to_file, "w") as json_file:
-            json.dump(self_as_dict, json_file, indent=4)
+        with open(path_to_yaml, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod
     def load(cls, file_name: PATHLIKE, cal_dir: PATHLIKE = None, **kwargs: Any) -> "Calibration":
-        """Loads a calibration object from a .json file.
+        """Loads a calibration object from a .yml file.
 
         Args:
             file_name: Name of the calibration file
             cal_dir: Path to directory to save calibration in, defaults to
-                :attr:`Config.calibration_directory`
+                :attr:`Config.calibration_directory` in order
             kwargs: (Other) key word arguments are fed to `Calibration.__init__`
 
         Returns:
             Calibration: A calibration object ready to quantify your data!
         """
-        cal_dir = cal_dir or CONFIG.calibration_directory
-        path_to_file = (Path(cal_dir) / file_name).with_suffix(".json")
-        with open(path_to_file, "r") as json_file:
-            self_as_dict = json.load(json_file)
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        try:
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="calibrations",
+                filepath=file_name_with_suffix,
+                override_source_dir=cal_dir,
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a calibration named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'calibrations' folder) to "
+                "`config.Config` or a ``cal_dir`` to this method, either of which contains the "
+                "calibration file."
+            ) from value_error
+
+        with open(file_path, "r") as yaml_file:
+            self_as_dict = yaml.safe_load(yaml_file)
 
         cal_dicts = self_as_dict.pop("cal_dicts")
 
@@ -316,14 +328,6 @@ class Calibration(SensitivityList):
     # Note, __add__ and filter are in SensitivityList, but need to be modified to
     # include more than the cal_list. SensitivityList.append() and __iadd__ are okay
     # as is.
-
-    def __add__(self, other: "Calibration") -> "Calibration":  # type: ignore
-        """Adding another calibration just appends to the `cal_list`."""
-        cal_list = self.cal_list + other.cal_list
-        self_as_dict = self.as_dict()
-        self_as_dict.pop("cal_dicts")
-        self_as_dict["cal_list"] = cal_list
-        return Calibration(**self_as_dict)
 
     def filter(self, **kwargs: SENSITIVITYLIST_FILTER_TYPE) -> "Calibration":  # noqa: A003
         """See `SensitivityList.filter`. Calibration's implementation retains metadata."""
@@ -511,6 +515,62 @@ class Calibration(SensitivityList):
         cal_dir = cal_dir or CONFIG.calibration_directory
         calibration = cls.load(file_name=file_name, cal_dir=cal_dir, **kwargs)
         return calibration.make_sensitivity_matrix(mol_list, mass_list)
+
+    # ------ methods for manipulating the calibration ------- #
+
+    def add_isotopes(self, isotope_spec: Dict[str, Tuple[str, List[str]]]) -> None:
+        """Duplicate sensitivity factor(s) in the calibration to cover different isotopes.
+
+        This method adds CalPoints in the calibration for each new tracked isotope. It
+        assumes that the sensitivity factor for each isotope at its respective mass is
+        the same.
+
+        The isotopes have to be treated as different molecules, or they will end up on the
+          same row of a SensitivityMatrix, convoluting their quantification. This means
+          that the `mol` attribute of their CalPoints must indicate the isotope, here
+          done with "@" and the mass.
+        Because SI quant's Quantifier object makes sure each of the molecules in the
+          calibration are in its MoleculeDict, Molecules of the new name must be added to
+          the MoleculeDict
+
+        Args:
+            calibration (Calibration): The calibration to expand
+            isotope_spec (dict): A specification of the isotopes to expand the calibration
+                with. The keys are molecules and the values are a tuple with the base mass,
+                which already exists in the calibration, followed by a list of masses to
+                add. An example for CO2 and O2 in 18-O labeling experiments is:
+                 {"CO2": ("M44", ["M46", "M48"]), "O2": ("M32", ["M34", "M36"])}
+        """
+        mdict = MoleculeDict()
+
+        for mol, (mass, new_masses) in isotope_spec.items():
+            cal_point = self.get(mol, mass)
+            molecule_as_dict = mdict.get(mol).as_dict()
+            for new_mass in new_masses:
+                new_mol = mol + "@" + new_mass
+                new_cal_point = CalPoint(
+                    mol=new_mol, mass=new_mass, F=cal_point.F, F_type=cal_point.F_type
+                )
+                self.append(new_cal_point)
+                new_molecule_as_dict = molecule_as_dict.copy()
+                new_molecule_as_dict["name"] = new_mol
+                # To avoid si_quant incorrectly predicting sensitivity factors at other
+                # masses we set a spectrum predicting intensity only at the specified mass.
+                new_molecule_as_dict["spectrum"] = {new_mass: 1}
+                new_molecule = Molecule(**new_molecule_as_dict)
+                mdict[new_mol] = new_molecule
+
+    def scaled_by_factor(self, factor: float) -> "Calibration":
+        """Return a copy of self with all sensitivity factors multiplied by factor."""
+        new_calibration_as_dict = self.as_dict().copy()
+        cal_list = []
+        for cal in self.cal_list:
+            new_cal_as_dict = cal.as_dict()
+            new_cal_as_dict.update(F=cal.F * factor, F_type=cal.F_type + " corrected")
+            cal_list.append(CalPoint(**new_cal_as_dict))
+        new_calibration_as_dict["cal_list"] = cal_list
+        calibration = Calibration(**new_calibration_as_dict)
+        return calibration
 
     # ------ methods for visualizing and sanity-checking the calibration ------- #
 

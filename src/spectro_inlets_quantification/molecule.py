@@ -20,12 +20,12 @@ Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 
 """
-import json
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
 
 import numpy as np
+import yaml
 from attrs import Attribute, asdict, define, field
 
 from .compatability import TypeAlias
@@ -178,49 +178,60 @@ class Molecule:
         return self.calc_norm_spectrum()
 
     def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
-        """Save the `as_dict` form of the molecule to a .json file.
+        """Save the `as_dict` form of the molecule to a yaml file.
+
+        Saves in `CONFIG.aux_data_directory / "molecules"` by default. This is the
+        user's quant data library (as opposed to the included library).
 
         Args:
             mol_dir: Path to directory to save molecule in, defaults to
                 :attr:`Config.molecule_directory`
-            file_name: Name of the .json file, including the file extension ".json"
+            file_name: Name of the yaml file, including the file extension ".yml"
         """
-        mol_dir = mol_dir or CONFIG.molecule_directory
-        if file_name is None:
-            file_name = self.name + ".json"
-        path_to_json = Path(mol_dir) / file_name
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        path_to_yaml = CONFIG.get_save_destination(
+            data_file_type="molecules",
+            filepath=file_name_with_suffix,
+            override_destination_dir=mol_dir,
+        )
         self_as_dict = self.as_dict()
-        with open(path_to_json, "w") as json_file:
-            json.dump(self_as_dict, json_file, indent=4)
+        with open(path_to_yaml, "w") as yaml_file:
+            yaml.dump(self_as_dict, yaml_file, indent=4)
 
     @classmethod
     def load(
         cls, file_name: str, mol_dir: Optional[PATH_OR_STR] = None, **kwargs: Any
     ) -> "Molecule":
-        """Loads a molecule object from a .json file.
+        """Loads a molecule object from a yaml file.
 
         Args:
-            file_name: Name of the .json file WITHOUT the ".json" extension
+            file_name: Name of the yaml file WITHOUT the ".yml" extension
             mol_dir: Path to directory to save molecule in, defaults to
-                :attr:`Config.molecule_directory`
+                :attr:`Config.molecule_directory` in order
             kwargs: (other) key word arguments are fed to Molecule.__init__()
 
         Returns:
             Molecule: a Molecule object ready to inform your calculations!
         """
-        mol_dir = mol_dir or CONFIG.molecule_directory
-        path_to_json = Path(mol_dir) / (file_name + ".json")
-        with open(path_to_json) as json_file:
-            self_as_dict = json.load(json_file)
-        self_as_dict.update(kwargs)
-        # Unfortunately, saving and loading a dict with integer keys to json
-        # turns the keys into strings. This fixes that:
+        file_name_with_suffix = Path(file_name).with_suffix(".yml")
         try:
-            self_as_dict["sigma"] = {
-                int(key): value for key, value in self_as_dict["sigma"].items()
-            }
-        except AttributeError:
-            print(f"Warning!!! {file_name} has sigma={self_as_dict['sigma']}.")
+            file_path = CONFIG.get_best_data_file(
+                data_file_type="molecules",
+                filepath=file_name_with_suffix,
+                override_source_dir=mol_dir,
+            )
+        except ValueError as value_error:
+            raise ValueError(
+                f"Can't find a molecule named '{file_name}'. Please consider providing an "
+                "`aux_data_directory` (which contains a 'molecules' folder) to "
+                "`config.Config` or a ``mol_dir`` to this method, either of which contains "
+                "the molecule file."
+            ) from value_error
+
+        with open(file_path) as yaml_file:
+            self_as_dict = yaml.safe_load(yaml_file)
+
+        self_as_dict.update(kwargs)
         return cls(**self_as_dict)
 
     def update(self, **kwargs: Any) -> None:

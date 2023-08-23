@@ -45,7 +45,7 @@ class Quantifier:
         sensitivity_matrices: Dict[str, Union[SensitivityMatrix, List[SensitivityMatrix]]] = None,
         # quantification measurement external conditions:
         carrier: MIXTURE_LIKE = None,
-        chip: Union[Chip, str] = "standard.json",
+        chip: Union[Chip, str] = "standard.yml",
         pp_mode: str = "He_solver",
         relaxed: List[MOL] = None,
         verbose: bool = True,
@@ -84,10 +84,10 @@ class Quantifier:
         # ------- quantification external conditions ------ #
         self.medium = Medium()  # initiates the one-and-only medium
         if isinstance(chip, str):
-            # interpret as a file name, with the .json extension!
+            # interpret as a file name, with the .yml extension!
             chip = Chip.load(chip, verbose=False)
         elif isinstance(chip, dict):
-            # then interpret it as a Chip.as_dict() dictionary (same as json contents)
+            # then interpret it as a Chip.as_dict() dictionary (same as yaml contents)
             chip = Chip(**chip)
         self.chip = chip
         self.chip.carrier = carrier  # this will make sure it's a Gas object.
@@ -95,7 +95,6 @@ class Quantifier:
         self.mdict = MoleculeDict()
 
         # ------- the calibration and SensitivityMatrix -------------- #
-        cal_dir = cal_dir or CONFIG.calibration_directory
         self.calibration_file = calibration_file
         self.calibration = calibration or Calibration.load(
             calibration_file,
@@ -158,9 +157,10 @@ class Quantifier:
         Remaining arguments as described in `__init__`.
 
         TODO: This mirrors the half implementation in to_dict and so requires extra
-        mandatory arguments
+            mandatory arguments
 
-        TODO: The dict is, at this point, not JSON able as it should be, but it is pickable.
+        TODO: The dict is, at this point, not YAML able as it should be,
+            but it is pickable.
 
         """
         if "sensitivity_matrices" in obj_as_dict:

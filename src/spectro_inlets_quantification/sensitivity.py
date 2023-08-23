@@ -121,8 +121,9 @@ class SensitivityFactor:
         self_as_dict = {
             "mol": self.mol,
             "mass": self.mass,
-            "F": self.F,
-            "f": self.f,
+            # because YAML becomes unreadable with numpy.float64
+            "F": float(self.F) if self.F else None,
+            "f": float(self.f) if self.f else None,
             "F_type": self.F_type,
         }
         return cast(SENSITIVITYFACTOR_AS_DICT, self_as_dict)
@@ -132,6 +133,18 @@ class SensitivityFactor:
         return SensitivityFactor(
             mass=self.mass, mol=self.mol, F=self.F, f=self.f, F_type=self.F_type
         )
+
+    def __add__(self, other: Union["SensitivityFactor", "SensitivityList"]) -> "SensitivityList":
+        """Add this SensitivityFactor to another SensitivityFactor or SensitivityList.
+
+        The result is a SensitivityList including all the sensitivity factors of the two.
+        """
+        if isinstance(other, SensitivityList):
+            # This insures that SensitivityFactor + SensitivityList -> SensitivityList
+            return other + self
+        elif isinstance(other, SensitivityFactor):
+            return SensitivityList(sf_list=[self, other])
+        raise TypeError(f"can't add {self} and {other} together")
 
 
 class SensitivityUnion(SensitivityFactor):
@@ -218,13 +231,46 @@ class SensitivityList:
         """Return the number of the SensitivityFactors in the object."""
         return len(self.sf_list)
 
-    def __add__(self, other: "SensitivityList") -> "SensitivityList":
-        """Return a `SensitivityList` with the sensitivity factors of itself and ``other``."""
+    def __add__(
+            self,
+            other: Union[SensitivityFactor, "SensitivityList"]
+    ) -> "SensitivityList":
+        """Return a `SensitivityList` with the sensitivity factors of self and ``other``.
+
+        You can add SensitivityFactor, CalPoint, SensitivityList, or Calibration to a
+        SensitivityList or Calibration.
+        If either self or other is a Calibration, the result will be a Calibration.
+        """
+        if self.__class__ is not other.__class__ and\
+                issubclass(other.__class__, self.__class__):
+            # This ensures that SensitivityList + Calibration -> Calibration
+            return other + self
+
+        if isinstance(other, SensitivityFactor):
+            # Adding a SensitivityFactor (or CalPoint) to a SensitivityList (or Calibration)
+            # just makes a copy with the new SensitivityFactor appended to the
+            # SensitivityList's list.
+            obj_as_dict = self.as_dict()
+            cls = self.__class__
+            if hasattr(self, "cal_list"):
+                obj_as_dict["cal_list"] = getattr(self, "cal_list", None) + [other]
+            else:
+                obj_as_dict["sf_list"] = getattr(self, "sf_list", None) + [other]
+            return cls(**obj_as_dict)
+
         if isinstance(other, SensitivityList):
+            # Adding a SensitivityList to a SensitivityList (or Calibration) makes a
+            # copy with the two lists of sensitivity factors appended.
             sf_list = self.sf_list + other.sf_list
-        else:
-            raise TypeError(f"can't add {other} to {self}")
-        return SensitivityList(sf_list)
+            cls = self.__class__
+            obj_as_dict = self.as_dict()
+            if "cal_dicts" in obj_as_dict:
+                obj_as_dict["cal_list"] = sf_list
+            else:
+                obj_as_dict["sf_list"] = sf_list
+            return cls(**obj_as_dict)
+
+        raise TypeError(f"can't add {self} and {other} together")
 
     def __iadd__(
         self, other: Union["SensitivityList", Sequence[SensitivityFactor]]
@@ -350,7 +396,7 @@ class SensitivityList:
 
     def as_dict(self) -> Dict[str, List[SENSITIVITYFACTOR_AS_DICT]]:
         """Return a full dictionary representation of the sensitivity list."""
-        sf_dicts = [sf.as_dict for sf in self.sf_list]
+        sf_dicts = [sf.as_dict() for sf in self.sf_list]
         self_as_dict = {"sensitivity_list": sf_dicts}
         return self_as_dict
 
