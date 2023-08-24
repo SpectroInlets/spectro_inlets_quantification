@@ -180,15 +180,19 @@ class Molecule:
     def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
         """Save the `as_dict` form of the molecule to a yaml file.
 
-        Saves in `CONFIG.aux_data_directory / "molecules"` by default. This is the
-        user's quant data library (as opposed to the included library).
+        Saves in `CONFIG.aux_data_directory / "molecules"` if it is set (this is the
+        user's quant data library, as opposed to the included library). If it is not set,
+        saves in `CONFIG.data_directory / "molecules"`.
 
         Args:
-            mol_dir: Path to directory to save molecule in, defaults to
-                :attr:`Config.molecule_directory`
+            mol_dir: Path to directory to save molecule in. Defaults are as outlinied above.
             file_name: Name of the yaml file, including the file extension ".yml"
         """
-        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        if file_name:
+            file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        else:
+            file_name_with_suffix = Path(self.name + ".yml")
+
         path_to_yaml = CONFIG.get_save_destination(
             data_file_type="molecules",
             filepath=file_name_with_suffix,

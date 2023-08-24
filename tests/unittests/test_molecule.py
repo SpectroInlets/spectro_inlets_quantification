@@ -57,9 +57,7 @@ class TestMoleculeDict:
         """Test as dict"""
         as_dict = Molecule().as_dict()
         fields_ = fields(Molecule)
-        field_names = {
-            f.name for f in fields_ if f.init and f.metadata.get("serialize", True)
-        }
+        field_names = {f.name for f in fields_ if f.init and f.metadata.get("serialize", True)}
         field_names == as_dict.keys()
 
     def test_norm_spectrum(self, molecule):
@@ -79,15 +77,25 @@ class TestMoleculeDict:
     @mark.parametrize("file_name", (None, "test_filename"))
     def test_save(self, mock_open, mol_dir, file_name, molecule, reset_singletons):
         """Test save"""
-        mol_dir = mol_dir or CONFIG.molecule_directories[0]
-        file_name = file_name or molecule.name + ".yml"
-        save_path = Path(mol_dir) / file_name
-        with patch.object(molecule, "as_dict") as mock_as_dict:
-            mock_as_dict.return_value = {"a": 47}
-            molecule.save(mol_dir=mol_dir, file_name=file_name)
-            mock_as_dict.assert_called_once()
-            mock_open.assert_called_once_with(save_path, "w")
-            handle = mock_open()
+        if file_name:
+            file_path_with_suffix = Path(file_name + ".yml")
+        else:
+            file_path_with_suffix = Path("Ar.yml")
 
-            out = "".join(c[0][0] for c in handle.write.call_args_list)
-            assert out == 'a: 47\n'
+        with patch.object(CONFIG, "get_save_destination") as get_save_destination:
+            with patch.object(molecule, "as_dict") as mock_as_dict:
+                mock_as_dict.return_value = {"a": 47}
+                get_save_destination.return_value = "Some_path.yml"
+                molecule.save(mol_dir=mol_dir, file_name=file_name)
+
+        get_save_destination.assert_called_once_with(
+            data_file_type="molecules",
+            filepath=file_path_with_suffix,
+            override_destination_dir=mol_dir,
+        )
+        mock_as_dict.assert_called_once()
+        mock_open.assert_called_once_with("Some_path.yml", "w")
+        handle = mock_open()
+
+        out = "".join(c[0][0] for c in handle.write.call_args_list)
+        assert out == "a: 47\n"

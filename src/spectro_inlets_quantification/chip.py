@@ -99,8 +99,10 @@ class Chip:
         Args:
             file_name: Name of the .yml file. Should include the file suffix;
                 file_name.endswith(".yml")
-            chip_dir: path to directory to save chip in, defaults to :attr:`Config.chip_directory`
-                the spitze chips folder.
+            chip_dir: path to directory to save chip in. Defaults to
+                ``:attr:`config.aux_data_directory` / "chips"`` if the
+                `aux_data_directory` is set and if not defaults to
+                ``:attr:`config.data_directory` / "chips"``
             kwargs: (other) key word arguments are added to self_as_dict before saving.
         """
         file_name_with_suffix = Path(file_name).with_suffix(".yml")

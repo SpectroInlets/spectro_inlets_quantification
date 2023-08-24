@@ -297,17 +297,20 @@ class SignalProcessor:
         self.medium = Medium()
         self.verbose = verbose
 
-    def save(self, proc_dir: Optional[PATH_OR_STR] = None,
-             file_name: Optional[str] = None) -> None:
-        """Save the `as_dict` form of the molecule to a yaml file.
+    def save(
+        self,
+        file_name: str,
+        proc_dir: Optional[PATH_OR_STR] = None,
+    ) -> None:
+        """Save the `as_dict` form of the signal processor to a yaml file.
 
-        Saves in `CONFIG.aux_data_directory / "molecules"` by default. This is the
-        user's quant data library (as opposed to the included library).
+        Saves in `CONFIG.aux_data_directory / "processors"` if it is set (this is the
+        user's quant data library, as opposed to the included library). If it is not set,
+        saves in `CONFIG.data_directory / "processors"`.
 
         Args:
-            proc_dir: Path to directory to save processor in, defaults to
-                :attr:`Config.processor_directory`
             file_name: Name of the yaml file, including the file extension ".yml"
+            proc_dir: Path to directory to save processor in. Defaults as outlines above.
         """
         file_name_with_suffix = Path(file_name).with_suffix(".yml")
         path_to_yaml = CONFIG.get_save_destination(
@@ -337,8 +340,8 @@ class SignalProcessor:
         except ValueError as value_error:
             raise ValueError(
                 f"Can't find a processor named '{file_name}'. Please consider providing an "
-                "`aux_data_directory` (which contains a 'molecules' folder) to "
-                "`config.Config` or a ``mol_dir`` to this method, either of which contains "
+                "`aux_data_directory` (which contains a 'processors' folder) to "
+                "`config.Config` or a ``proc_dir`` to this method, either of which contains "
                 "the molecule file."
             ) from value_error
 

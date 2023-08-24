@@ -349,9 +349,7 @@ class TestSignalProcessor:
             init_kwargs["proc_dir"] = proc_dir
 
         # expected_proc_dir = proc_dir if proc_dir else CONFIG.processor_directories[0]
-        expected_filename = Path((file_name if file_name else "Sorens final processor") +
-                               ".json")
-
+        expected_filename = Path((file_name if file_name else "Sorens final processor") + ".yml")
 
         with patch("spectro_inlets_quantification.config.Config.get_best_data_file") as get_best:
             get_best.return_value = Path("Best")
@@ -359,8 +357,7 @@ class TestSignalProcessor:
                 signal_processor_init.return_value = None
                 SignalProcessor.load(**init_kwargs)
         get_best.assert_called_once_with(
-            data_file_type="processors", filepath=expected_filename,
-            override_source_dir=proc_dir
+            data_file_type="processors", filepath=expected_filename, override_source_dir=proc_dir
         )
 
         mock_open.assert_called_once_with(Path("Best"), "r")

@@ -242,14 +242,20 @@ class Calibration(SensitivityList):
         Args:
             file_name (str): Name of file to save in, must end in .yml
                 If not specified, will use self.name + ".yml"
-            cal_dir: Path to directory to save calibration in, defaults to
-                :attr:`Config.calibration_directory`
+            cal_dir: Path to directory to save calibration in. Defaults to
+                ``:attr:`config.aux_data_directory` / "calibrations"`` if the
+                `aux_data_directory` is set and if not defaults to
+                ``:attr:`config.data_directory` / "calibrations"``
         Raises:
             ValueError: if name not specified and "None" in self.name
                 (this is the case if name wasn't specified
                 and either date or setup wasn't specified when initiating)
         """
-        file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        if file_name:
+            file_name_with_suffix = Path(file_name).with_suffix(".yml")
+        else:
+            file_name_with_suffix = Path(self.name + ".yml")
+
         path_to_yaml = CONFIG.get_save_destination(
             data_file_type="calibrations",
             filepath=file_name_with_suffix,
