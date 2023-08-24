@@ -87,10 +87,7 @@ class Config(metaclass=Singleton):
         )
 
     def get_save_destination(
-        self,
-        data_file_type: str,
-        filepath: Path,
-        override_destination_dir: Optional[Path] = None
+        self, data_file_type: str, filepath: Path, override_destination_dir: Optional[Path] = None
     ) -> Path:
         """Return the best destination for a specific data file. Create the folder if needed.
 

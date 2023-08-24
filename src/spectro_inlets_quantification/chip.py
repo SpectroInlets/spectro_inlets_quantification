@@ -16,12 +16,12 @@ Variables with abbreviated or non-descriptive names, e.g. physical quantities:
 The variable names are from .../Industrial R&D/Quantification/Reports/MS_Theory_v1.0
 """
 
-import yaml
 from math import isclose
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Union, cast
 
 import numpy as np
+import yaml
 from scipy.optimize import fsolve  # type: ignore
 
 from .config import Config

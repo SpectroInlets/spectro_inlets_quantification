@@ -231,18 +231,14 @@ class SensitivityList:
         """Return the number of the SensitivityFactors in the object."""
         return len(self.sf_list)
 
-    def __add__(
-            self,
-            other: Union[SensitivityFactor, "SensitivityList"]
-    ) -> "SensitivityList":
+    def __add__(self, other: Union[SensitivityFactor, "SensitivityList"]) -> "SensitivityList":
         """Return a `SensitivityList` with the sensitivity factors of self and ``other``.
 
         You can add SensitivityFactor, CalPoint, SensitivityList, or Calibration to a
         SensitivityList or Calibration.
         If either self or other is a Calibration, the result will be a Calibration.
         """
-        if self.__class__ is not other.__class__ and\
-                issubclass(other.__class__, self.__class__):
+        if self.__class__ is not other.__class__ and issubclass(other.__class__, self.__class__):
             # This ensures that SensitivityList + Calibration -> Calibration
             return other + self
 

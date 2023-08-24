@@ -8,17 +8,17 @@ Equivalently initiating a `SensitivityList` from a ``sf_list`` of SensitivityFac
 the way to make a calibration during dev-time is to add CalPoints to a `cal_list` and
 then use that to initiate a `Calibration`.
 """
-import yaml
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 import attr
+import yaml
 
 from .chip import Chip
 from .config import Config
 from .constants import STANDARD_MOL_COLORS
-from .custom_types import YAMLVALUE, MASS, MASSLIST, MOL, MOLLIST, PATHLIKE
+from .custom_types import MASS, MASSLIST, MOL, MOLLIST, PATHLIKE, YAMLVALUE
 from .molecule import Molecule, MoleculeDict
 from .sensitivity import (  # noqa
     SENSITIVITYLIST_FILTER_TYPE,
