@@ -156,3 +156,12 @@ def clean(context, dryrun=False):
                 if not dryrun:
                     cleanpath.unlink()
                     pass
+
+
+@task
+def build(context):
+    """Build the package"""
+    clean(context)
+    with context.cd(THIS_DIR):
+        context.run("python -m build")
+    print("Upload with: python3 -m twine upload --repository testpypi dist/*")
