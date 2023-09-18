@@ -1,0 +1,8 @@
+# We depend on an unreleased feature of sphinx-proof for building the docs. Installing directly
+# from source code with pip is not supported on ReadTheDocs, so we have to make this trick. We
+# put all other doc deps are in requirements-rtd.txt, which is installed with pip on RTD, and
+# then we add that and the source dep in requirements-doc.txt, which is what is installed in
+# virtual environments for local development. The source dependency is then installed manually on
+# RTD
+-r requirements-rtd.txt
+git+https://github.com/executablebooks/sphinx-proof@d37495f

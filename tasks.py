@@ -11,15 +11,9 @@ except ImportError:
 from invoke import task
 
 
-# The first time invoke is called, it is to install dependencies, so toml is not yet installed
-try:
-    import toml
-except ImportError:
-    toml = None
-
-
 THIS_DIR = Path(__file__).parent
 SOURCE_DIR = THIS_DIR / "src" / "spectro_inlets_quantification"
+
 
 @task(aliases=("ruff",))
 def lint(context, fix=False):
@@ -62,30 +56,31 @@ def check_code_format(context):
             rprint("[bold green]Code format checked. No issues.")
     return result.return_code
 
+
 @task(
     aliases=["tests"],
     help={
         "color": "Whether to display pytest output in color, 'yes' or 'no'",
         "verbose": "Makes the pytest output verbose",
         "s_no_capture": (
-                "Prevents pytest from capturing output (making it possible to see prints etc.)"
+            "Prevents pytest from capturing output (making it possible to see prints etc.)"
         ),
         "k_only_run": (
-                "Only run tests that matches the expression in STRING. See the help for pytest's "
-                "`-k` option to read more about the options for expression"
+            "Only run tests that matches the expression in STRING. See the help for pytest's "
+            "`-k` option to read more about the options for expression"
         ),
         "x_exit_on_first_error": "Make pytest exit on first error",
         "also_slow": "Also run slow tests, disabled by default",
     },
 )
 def test(
-        context,
-        color="yes",
-        verbose=False,
-        s_no_capture=False,
-        k_only_run=None,
-        x_exit_on_first_error=False,
-        also_slow=False,
+    context,
+    color="yes",
+    verbose=False,
+    s_no_capture=False,
+    k_only_run=None,
+    x_exit_on_first_error=False,
+    also_slow=False,
 ):
     """Run tests with pytest"""
     if platform.system() == "Windows":
@@ -125,6 +120,7 @@ def checks(context):
         rprint(r"| [bold]Check output above[/bold]  |")
         rprint(r"+---------------------+")
 
+
 @task(aliases=("bd",))
 def build_docs(context):
     with context.cd(THIS_DIR / "docs"):
@@ -134,18 +130,11 @@ def build_docs(context):
 @task(aliases=("pip", "deps"))
 def dependencies(context):
     """Install all requirements and development requirements"""
-    global toml
-    if toml is None:
-        context.run("python -m pip install toml")
-        import toml
     with context.cd(THIS_DIR):
         context.run("python -m pip install --upgrade pip")
-        data = toml.load(THIS_DIR / "pyproject.toml")
-        context.run(f"pip install --upgrade {' '.join(data['project']['dependencies'])}")
-        context.run(
-            "pip install --upgrade "
-            f"{' '.join(data['project']['optional-dependencies']['dev'])}"
-        )
+        context.run("python -m pip install .")  # Also installs core dependencies
+        context.run("python -m pip install -r requirements-dev.txt")
+        context.run("python -m pip install -r requirements-doc.txt")
 
 
 CLEAN_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".mypy_cache", "build")
