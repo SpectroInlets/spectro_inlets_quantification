@@ -11,12 +11,15 @@ authors = [
 description = "The ECMS quantification package"
 requires-python = ">=3.7"
 keywords = ["ECMS", "quantification", "data treatment"]
-license = {text = "Proprietary"}
+license = {file = "DUAL_LICENSE"}
+url = "https://github.com/SpectroInlets/spectro_inlets_quantification"
 classifiers = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 dependencies = [
@@ -28,7 +31,6 @@ dependencies = [
     "attrs>=23.1.0",
 ]
 dynamic = ["version", "readme"]
-
 
 [project.optional-dependencies]
 dev = [
@@ -47,6 +49,14 @@ dev = [
 ]
 rest = ["docutils>=0.3", "pack ==1.1, ==1.3"]
 
+###########################
+# Packaging configuration #
+###########################
+
+[tool.setuptools.metadata]
+description-file = "README.md"
+long_description_content_type = "text/markdown"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -56,6 +66,19 @@ version = {attr = "spectro_inlets_quantification.__version__"}
 # The readme prevents uploading because PyPI expects rst. I specified in setup.py that it is
 #   markdown, but can't find the syntax to do it here. See:
 #   https://packaging.python.org/en/latest/specifications/core-metadata/#description-content-type
+
+[tool.setuptools.package_data]
+your_package_name = [
+    "data/*.yml",
+    "data/chips/*.yml",
+    "data/molecules/*.yml",
+    "data/calibrations/*.yml",
+    "data/processors/*.yml",
+]
+
+##################################
+# Development tool configuration #
+##################################
 
 [tool.coverage.report]
 exclude_lines = [
