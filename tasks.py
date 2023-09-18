@@ -137,7 +137,7 @@ def dependencies(context):
         context.run("python -m pip install -r requirements-doc.txt")
 
 
-CLEAN_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".mypy_cache", "build")
+CLEAN_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".mypy_cache", "build", "dist")
 
 
 @task
