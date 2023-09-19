@@ -44,18 +44,18 @@ class TestMoleculeDict:
 
     def test_attrs_post_init(self):
         """Test __attrs_post_init__"""
-        molecule = Molecule()
+        molecule = Molecule("Ar")
         assert molecule.spectrum is None
         assert molecule.T_of_M is None
-        molecule = Molecule(beta=0.8)
+        molecule = Molecule("Ar", beta=0.8)
         assert molecule.T_of_M is not None
         assert molecule.T_of_M(3.0) == approx(3.0**0.8)
-        molecule = Molecule(spectrum_0={"a": 47, "b": 42})
+        molecule = Molecule("Ar", spectrum_0={"a": 47, "b": 42})
         assert molecule.spectrum == molecule.spectrum_0
 
     def test_as_dict(self):
         """Test as dict"""
-        as_dict = Molecule().as_dict()
+        as_dict = Molecule("Ar").as_dict()
         fields_ = fields(Molecule)
         field_names = {f.name for f in fields_ if f.init and f.metadata.get("serialize", True)}
         field_names == as_dict.keys()

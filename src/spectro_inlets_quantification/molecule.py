@@ -117,7 +117,7 @@ class Molecule:
 
     """
 
-    name: Optional[str] = field(default=None)
+    name: str = field()
     real_name: Optional[str] = field(default=None)
     formula: Optional[str] = field(default=None)
     spectrum: Optional[MASS_TO_FLOAT] = field(default=None)
