@@ -177,7 +177,7 @@ class Molecule:
         """Normalized version of self.spectrum."""
         return self.calc_norm_spectrum()
 
-    def save(self, mol_dir: Optional[PATH_OR_STR] = None, file_name: Optional[str] = None) -> None:
+    def save(self, file_name: Optional[str] = None, mol_dir: Optional[PATH_OR_STR] = None) -> None:
         """Save the `as_dict` form of the molecule to a yaml file.
 
         Saves in `CONFIG.aux_data_directory / "molecules"` if it is set (this is the
@@ -185,8 +185,8 @@ class Molecule:
         saves in `CONFIG.data_directory / "molecules"`.
 
         Args:
-            mol_dir: Path to directory to save molecule in. Defaults are as outlinied above.
             file_name: Name of the yaml file, including the file extension ".yml"
+            mol_dir: Path to directory to save molecule in. Defaults are as outlinied above.
         """
         if file_name:
             file_name_with_suffix = Path(file_name).with_suffix(".yml")

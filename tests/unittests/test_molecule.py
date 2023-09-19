@@ -86,7 +86,7 @@ class TestMoleculeDict:
             with patch.object(molecule, "as_dict") as mock_as_dict:
                 mock_as_dict.return_value = {"a": 47}
                 get_save_destination.return_value = "Some_path.yml"
-                molecule.save(mol_dir=mol_dir, file_name=file_name)
+                molecule.save(file_name=file_name, mol_dir=mol_dir)
 
         get_save_destination.assert_called_once_with(
             data_file_type="molecules",
