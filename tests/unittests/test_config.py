@@ -27,24 +27,6 @@ def test_data_directory_property(reset_singletons):
     assert config.data_directory == obj2
 
 
-@pytest.mark.parametrize("name", ("chip", "calibration", "molecule", "processor"))
-def test_directories_properties(reset_singletons, name) -> None:
-    """Test the chip_directory property"""
-    path = Path("test")
-    config = Config(path)
-    assert getattr(config, f"{name}_directories") == [path / f"{name}s"]
-
-
-@pytest.mark.parametrize("name", ("chip", "calibration", "molecule", "processor"))
-def test_directories_properties_with_aux(reset_singletons, name) -> None:
-    """Test the chip_directory property"""
-    path = Path("test")
-    aux_path = Path("auxxx")
-    config = Config(path)
-    config.aux_data_directory = aux_path
-    assert getattr(config, f"{name}_directories") == [aux_path / f"{name}s", path / f"{name}s"]
-
-
 def test_get_best_data_file_bad_type():
     config = Config("path")
     with pytest.raises(ValueError):

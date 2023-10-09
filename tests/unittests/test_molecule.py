@@ -44,22 +44,20 @@ class TestMoleculeDict:
 
     def test_attrs_post_init(self):
         """Test __attrs_post_init__"""
-        molecule = Molecule()
+        molecule = Molecule("Ar")
         assert molecule.spectrum is None
         assert molecule.T_of_M is None
-        molecule = Molecule(beta=0.8)
+        molecule = Molecule("Ar", beta=0.8)
         assert molecule.T_of_M is not None
         assert molecule.T_of_M(3.0) == approx(3.0**0.8)
-        molecule = Molecule(spectrum_0={"a": 47, "b": 42})
+        molecule = Molecule("Ar", spectrum_0={"a": 47, "b": 42})
         assert molecule.spectrum == molecule.spectrum_0
 
     def test_as_dict(self):
         """Test as dict"""
-        as_dict = Molecule().as_dict()
+        as_dict = Molecule("Ar").as_dict()
         fields_ = fields(Molecule)
-        field_names = {
-            f.name for f in fields_ if f.init and f.metadata.get("serialize", True)
-        }
+        field_names = {f.name for f in fields_ if f.init and f.metadata.get("serialize", True)}
         field_names == as_dict.keys()
 
     def test_norm_spectrum(self, molecule):
@@ -79,15 +77,25 @@ class TestMoleculeDict:
     @mark.parametrize("file_name", (None, "test_filename"))
     def test_save(self, mock_open, mol_dir, file_name, molecule, reset_singletons):
         """Test save"""
-        mol_dir = mol_dir or CONFIG.molecule_directories[0]
-        file_name = file_name or molecule.name + ".yml"
-        save_path = Path(mol_dir) / file_name
-        with patch.object(molecule, "as_dict") as mock_as_dict:
-            mock_as_dict.return_value = {"a": 47}
-            molecule.save(mol_dir=mol_dir, file_name=file_name)
-            mock_as_dict.assert_called_once()
-            mock_open.assert_called_once_with(save_path, "w")
-            handle = mock_open()
+        if file_name:
+            file_path_with_suffix = Path(file_name + ".yml")
+        else:
+            file_path_with_suffix = Path("Ar.yml")
 
-            out = "".join(c[0][0] for c in handle.write.call_args_list)
-            assert out == 'a: 47\n'
+        with patch.object(CONFIG, "get_save_destination") as get_save_destination:
+            with patch.object(molecule, "as_dict") as mock_as_dict:
+                mock_as_dict.return_value = {"a": 47}
+                get_save_destination.return_value = "Some_path.yml"
+                molecule.save(file_name=file_name, mol_dir=mol_dir)
+
+        get_save_destination.assert_called_once_with(
+            data_file_type="molecules",
+            filepath=file_path_with_suffix,
+            override_destination_dir=mol_dir,
+        )
+        mock_as_dict.assert_called_once()
+        mock_open.assert_called_once_with("Some_path.yml", "w")
+        handle = mock_open()
+
+        out = "".join(c[0][0] for c in handle.write.call_args_list)
+        assert out == "a: 47\n"
