@@ -17,9 +17,12 @@ build:
       - echo "Command run at 'post_build' step"
       - echo `date`
     post_install:
+      # We have to install this manually, as RTD doesn't support installing from source with pip
+      # See more explanation in requirements-doc.txt
       - /home/docs/checkouts/readthedocs.org/user_builds/spectroinlets-spectro-inlets-quantification/envs/$READTHEDOCS_VERSION/bin/python -m pip install --no-cache-dir git+https://github.com/executablebooks/sphinx-proof@d37495f
 
 # Optionally declare the Python requirements required to build your docs
 python:
    install:
+   - requirements: .
    - requirements: requirements-rtd.txt
